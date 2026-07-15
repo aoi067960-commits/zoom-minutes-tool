@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>画像モーションツール（Ken Burns + レイヤー合成）</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #1c1e21;
+    --text-muted: #6b7280;
+    --border: #e2e4e9;
+    --accent: #4f6df5;
+    --accent-hover: #3d5ae0;
+    --danger: #e0554f;
+    --start-color: #4f9d5a;
+    --end-color: #e0554f;
+    --bg-badge: #4f6df5;
+    --sprite-badge: #b25fd1;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --card: #1e2126;
+      --text: #e8e9ec;
+      --text-muted: #9aa0aa;
+      --border: #2c2f36;
+      --accent: #6d87ff;
+      --accent-hover: #8398ff;
+      --danger: #f0716c;
+      --start-color: #6fbf7c;
+      --end-color: #f0716c;
+      --bg-badge: #6d87ff;
+      --sprite-badge: #cd8ee6;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 0 0 24px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 20px;
+  }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+  }
+  .card + .card { margin-top: 20px; }
+  .card h2 {
+    font-size: 14px;
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+  .add-row { display: flex; gap: 10px; margin-bottom: 4px; }
+  .dropzone {
+    flex: 1;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 22px 10px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .dropzone b { display: block; font-size: 13px; color: var(--text); margin-bottom: 2px; }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .dropzone.bgzone:hover, .dropzone.bgzone.drag { border-color: var(--bg-badge); }
+  .dropzone.spritezone:hover, .dropzone.spritezone.drag { border-color: var(--sprite-badge); }
+
+  .layer-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .layer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .layer-row.active { border-color: var(--accent); background: rgba(79,109,245,0.08); }
+  .layer-row img.thumb {
+    width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); background: #0002;
+    flex-shrink: 0;
+  }
+  .layer-info { flex: 1; min-width: 0; }
+  .layer-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700; color: #fff; border-radius: 4px;
+    padding: 1px 6px; margin-top: 2px;
+  }
+  .badge.bg { background: var(--bg-badge); }
+  .badge.sprite { background: var(--sprite-badge); }
+  .layer-opacity { width: 60px; }
+  .layer-btns { display: flex; gap: 2px; flex-shrink: 0; }
+  .icon-btn {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 6px;
+    width: 26px; height: 26px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--accent); }
+  .empty-hint { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+
+  .kf-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .kf-tabs button {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .kf-tabs button[data-kf="start"].active {
+    background: var(--start-color);
+    border-color: var(--start-color);
+    color: #fff;
+  }
+  .kf-tabs button[data-kf="end"].active {
+    background: var(--end-color);
+    border-color: var(--end-color);
+    color: #fff;
+  }
+  .stage {
+    position: relative;
+    width: 100%;
+    max-height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: repeating-conic-gradient(#0000 0 25%, #0000 0), #00000010;
+    border-radius: 8px;
+    overflow: hidden;
+    user-select: none;
+    touch-action: none;
+  }
+  .stage img {
+    display: block;
+    max-width: 100%;
+    max-height: 420px;
+    pointer-events: none;
+  }
+  .rect-overlay {
+    position: absolute;
+    border: 2px solid;
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .rect-overlay.start { border-color: var(--start-color); }
+  .rect-overlay.end { border-color: var(--end-color); opacity: .55; }
+  .crosshair {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    margin-left: -11px;
+    margin-top: -11px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.4);
+    cursor: grab;
+  }
+  .crosshair.start { background: var(--start-color); }
+  .crosshair.end { background: var(--end-color); opacity: .85; }
+  .crosshair.dim { opacity: .35; cursor: default; }
+  .field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .field label { color: var(--text-muted); flex-shrink: 0; }
+  .wobble-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .field input[type="range"] { flex: 1; }
+  .field input[type="number"], .field select {
+    width: 100px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+  }
+  .field .val { width: 46px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+  .row { display: flex; gap: 10px; }
+  .row .field { flex: 1; }
+  button.primary {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  button.primary:hover { background: var(--accent-hover); }
+  button.primary:disabled { opacity: .5; cursor: not-allowed; }
+  button.secondary {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .preview-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  canvas#previewCanvas {
+    max-width: 100%;
+    display: block;
+  }
+  .sprite-box {
+    position: absolute;
+    border: 2px solid;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  .sprite-box.start { border-color: var(--start-color); }
+  .sprite-box.end { border-color: var(--end-color); }
+  .sprite-box.active { cursor: grab; }
+  .sprite-box.inactive { opacity: .4; pointer-events: none; }
+  .status {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 4px;
+    min-height: 16px;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin: 8px 0 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>画像モーションツール</h1>
+  <p class="subtitle">背景・キャラクターなどをレイヤーごとに読み込み、それぞれ独立にパン/ズーム/移動/回転させて、Ken Burns風のパララックス動画をWebMとして書き出せます。</p>
+
+  <div class="layout">
+    <div class="col-left">
+      <div class="card">
+        <h2>1. レイヤーを追加</h2>
+        <div class="add-row">
+          <div class="dropzone bgzone" id="dropzoneBg"><b>背景を追加</b>クリック / ドラッグ&ドロップ<br>（パン&ズームで動かす）</div>
+          <div class="dropzone spritezone" id="dropzoneSprite"><b>キャラクター/前景を追加</b>クリック / ドラッグ&ドロップ<br>（位置・拡縮・回転で動かす、透過PNG推奨）</div>
+        </div>
+        <input type="file" id="fileInputBg" accept="image/*" hidden>
+        <input type="file" id="fileInputSprite" accept="image/*" hidden>
+
+        <div class="layer-list" id="layerList"></div>
+        <p class="empty-hint" id="emptyHint">まだレイヤーがありません。上のいずれかから画像を追加してください。</p>
+      </div>
+
+      <div class="card" id="editorCardBg" style="display:none;">
+        <h2>2. フレームを設定（背景レイヤー：<span id="bgLayerName"></span>）</h2>
+        <div class="kf-tabs">
+          <button data-kf="start" class="active">開始フレーム</button>
+          <button data-kf="end">終了フレーム</button>
+        </div>
+        <div class="stage" id="stage">
+          <img id="sourceImage" alt="">
+          <div class="rect-overlay start" id="rectStart"></div>
+          <div class="rect-overlay end" id="rectEnd"></div>
+          <div class="crosshair start" id="crossStart"></div>
+          <div class="crosshair end" id="crossEnd"></div>
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label>ズーム</label>
+          <input type="range" id="zoomSlider" min="1" max="4" step="0.01" value="1">
+          <span class="val" id="zoomValue">1.00x</span>
+        </div>
+        <div class="field">
+          <label class="wobble-label"><input type="checkbox" id="wobbleToggle"> 浮遊感を追加</label>
+          <input type="range" id="wobbleAmount" min="0" max="100" step="5" value="30" disabled>
+          <span class="val" id="wobbleValue">30%</span>
+        </div>
+        <p class="hint">〇印をドラッグして中心位置を移動、スライダーでズーム倍率を調整します。緑=開始、赤=終了。「浮遊感」は開始→終了の動きに、微妙な揺れを常時重ねます。</p>
+      </div>
+
+      <div class="card" id="editorCardSprite" style="display:none;">
+        <h2>2. フレームを設定（前景レイヤー：<span id="spriteLayerName"></span>）</h2>
+        <div class="kf-tabs" id="spriteKfTabs">
+          <button data-kf="start" class="active">開始フレーム</button>
+          <button data-kf="end">終了フレーム</button>
+        </div>
+        <div class="field">
+          <label>サイズ</label>
+          <input type="range" id="scaleSlider" min="0.1" max="3" step="0.01" value="1">
+          <span class="val" id="scaleValue">1.00x</span>
+        </div>
+        <div class="field">
+          <label>回転</label>
+          <input type="range" id="rotationSlider" min="-45" max="45" step="1" value="0">
+          <span class="val" id="rotationValue">0°</span>
+        </div>
+        <p class="hint">右側のプレビュー画面上で緑/赤の枠を直接ドラッグして位置を移動できます（枠=開始/終了）。</p>
+      </div>
+    </div>
+
+    <div class="col-right">
+      <div class="card">
+        <h2>3. アニメーション設定</h2>
+        <div class="row">
+          <div class="field">
+            <label>再生時間(秒)</label>
+            <input type="number" id="duration" min="0.5" max="30" step="0.5" value="5">
+          </div>
+          <div class="field">
+            <label>FPS</label>
+            <select id="fps">
+              <option value="24">24</option>
+              <option value="30" selected>30</option>
+              <option value="60">60</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>イージング</label>
+          <select id="easing">
+            <option value="linear">等速（linear）</option>
+            <option value="easeInOut" selected>滑らかに加減速（easeInOut）</option>
+            <option value="easeIn">ゆっくり開始</option>
+            <option value="easeOut">ゆっくり終了</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>再生モード</label>
+          <select id="playMode">
+            <option value="once" selected>開始→終了（1回）</option>
+            <option value="pingpong">開始→終了→開始（往復）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>出力サイズ</label>
+          <select id="outputPreset">
+            <option value="auto">元画像に合わせる</option>
+            <option value="1280x720">1280×720（横）</option>
+            <option value="1080x1080">1080×1080（正方形）</option>
+            <option value="1080x1920">1080×1920（縦）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>4. プレビュー・書き出し</h2>
+        <div class="preview-wrap" id="previewWrap">
+          <canvas id="previewCanvas" width="640" height="360"></canvas>
+        </div>
+        <div style="height:12px;"></div>
+        <button class="secondary" id="playBtn" disabled>プレビュー再生</button>
+        <button class="primary" id="exportBtn" disabled>WebM動画として書き出す</button>
+        <div class="status" id="exportStatus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---------- DOM ----------
+  const dropzoneBg = document.getElementById('dropzoneBg');
+  const dropzoneSprite = document.getElementById('dropzoneSprite');
+  const fileInputBg = document.getElementById('fileInputBg');
+  const fileInputSprite = document.getElementById('fileInputSprite');
+  const layerListEl = document.getElementById('layerList');
+  const emptyHint = document.getElementById('emptyHint');
+
+  const editorCardBg = document.getElementById('editorCardBg');
+  const editorCardSprite = document.getElementById('editorCardSprite');
+  const bgLayerName = document.getElementById('bgLayerName');
+  const spriteLayerName = document.getElementById('spriteLayerName');
+
+  const stage = document.getElementById('stage');
+  const sourceImage = document.getElementById('sourceImage');
+  const rectEls = { start: document.getElementById('rectStart'), end: document.getElementById('rectEnd') };
+  const crossEls = { start: document.getElementById('crossStart'), end: document.getElementById('crossEnd') };
+  const bgKfTabs = document.querySelectorAll('#editorCardBg .kf-tabs button');
+  const zoomSlider = document.getElementById('zoomSlider');
+  const zoomValue = document.getElementById('zoomValue');
+  const wobbleToggle = document.getElementById('wobbleToggle');
+  const wobbleAmount = document.getElementById('wobbleAmount');
+  const wobbleValue = document.getElementById('wobbleValue');
+
+  const spriteKfTabs = document.querySelectorAll('#spriteKfTabs button');
+  const scaleSlider = document.getElementById('scaleSlider');
+  const scaleValue = document.getElementById('scaleValue');
+  const rotationSlider = document.getElementById('rotationSlider');
+  const rotationValue = document.getElementById('rotationValue');
+
+  const durationInput = document.getElementById('duration');
+  const fpsSelect = document.getElementById('fps');
+  const easingSelect = document.getElementById('easing');
+  const playModeSelect = document.getElementById('playMode');
+  const outputPreset = document.getElementById('outputPreset');
+  const playBtn = document.getElementById('playBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const exportStatus = document.getElementById('exportStatus');
+  const previewWrap = document.getElementById('previewWrap');
+  const canvas = document.getElementById('previewCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // ---------- State ----------
+  let layers = [];          // { id, name, type: 'background'|'sprite', img, naturalW, naturalH, opacity, keyframes:{start,end} }
+  let layerCounter = 0;
+  let bgCount = 0, spriteCount = 0;
+  let activeLayerId = null;
+  let activeKf = 'start';
+  let dragging = null;      // { mode: 'crosshair'|'sprite', kf } or null
+  let playing = false;
+  let recording = false;
+  const spriteBoxEls = { start: null, end: null };
+
+  function activeLayer() { return layers.find(l => l.id === activeLayerId) || null; }
+  function clamp01(v) { return Math.min(1, Math.max(0, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  // ---------- Adding layers ----------
+  function wireDropzone(zone, input, type) {
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) addLayerFromFile(e.dataTransfer.files[0], type);
+    });
+    input.addEventListener('change', () => {
+      if (input.files && input.files[0]) addLayerFromFile(input.files[0], type);
+      input.value = '';
+    });
+  }
+  wireDropzone(dropzoneBg, fileInputBg, 'background');
+  wireDropzone(dropzoneSprite, fileInputSprite, 'sprite');
+
+  function addLayerFromFile(file, type) {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const image = new Image();
+      image.onload = () => {
+        const isBg = type === 'background';
+        const layer = {
+          id: 'L' + (++layerCounter),
+          name: isBg ? ('背景' + (++bgCount)) : ('キャラクター' + (++spriteCount)),
+          type,
+          img: image,
+          naturalW: image.naturalWidth,
+          naturalH: image.naturalHeight,
+          opacity: 1,
+          keyframes: isBg
+            ? { start: { zoom: 1.0, cx: 0.5, cy: 0.5 }, end: { zoom: 1.6, cx: 0.5, cy: 0.5 } }
+            : { start: { x: 0.5, y: 0.5, scale: 1.0, rotation: 0 }, end: { x: 0.5, y: 0.5, scale: 1.0, rotation: 0 } },
+          wobble: isBg ? { enabled: false, amount: 0.3 } : null
+        };
+        const wasEmpty = layers.length === 0;
+        layers.push(layer);
+        selectLayer(layer.id);
+        if (wasEmpty) setupOutputSize();
+        renderLayerList();
+        playBtn.disabled = false;
+        exportBtn.disabled = false;
+        redrawActiveFrame();
+      };
+      image.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ---------- Layer list UI ----------
+  function renderLayerList() {
+    layerListEl.innerHTML = '';
+    emptyHint.style.display = layers.length ? 'none' : '';
+    layers.forEach((layer, idx) => {
+      const row = document.createElement('div');
+      row.className = 'layer-row' + (layer.id === activeLayerId ? ' active' : '');
+      row.innerHTML = `
+        <img class="thumb" src="${layer.img.src}">
+        <div class="layer-info">
+          <div class="layer-name">${layer.name}</div>
+          <span class="badge ${layer.type === 'background' ? 'bg' : 'sprite'}">${layer.type === 'background' ? '背景' : '前景'}</span>
+        </div>
+        <input type="range" class="layer-opacity" min="0" max="1" step="0.05" value="${layer.opacity}" title="不透明度">
+        <div class="layer-btns">
+          <button class="icon-btn" data-act="up" title="奥へ">↑</button>
+          <button class="icon-btn" data-act="down" title="手前へ">↓</button>
+          <button class="icon-btn" data-act="del" title="削除">✕</button>
+        </div>
+      `;
+      row.addEventListener('click', ev => {
+        if (ev.target.closest('.icon-btn') || ev.target.classList.contains('layer-opacity')) return;
+        selectLayer(layer.id);
+      });
+      row.querySelector('.layer-opacity').addEventListener('input', ev => {
+        layer.opacity = parseFloat(ev.target.value);
+        redrawActiveFrame();
+      });
+      row.querySelector('[data-act="up"]').addEventListener('click', () => moveLayer(idx, -1));
+      row.querySelector('[data-act="down"]').addEventListener('click', () => moveLayer(idx, 1));
+      row.querySelector('[data-act="del"]').addEventListener('click', () => deleteLayer(layer.id));
+      layerListEl.appendChild(row);
+    });
+  }
+
+  function moveLayer(idx, dir) {
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= layers.length) return;
+    const tmp = layers[idx];
+    layers[idx] = layers[newIdx];
+    layers[newIdx] = tmp;
+    renderLayerList();
+    redrawActiveFrame();
+  }
+
+  function deleteLayer(id) {
+    layers = layers.filter(l => l.id !== id);
+    if (activeLayerId === id) {
+      activeLayerId = layers.length ? layers[layers.length - 1].id : null;
+    }
+    renderLayerList();
+    selectLayer(activeLayerId);
+    if (!layers.length) {
+      playBtn.disabled = true;
+      exportBtn.disabled = true;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  function selectLayer(id) {
+    activeLayerId = id;
+    renderLayerList();
+    const layer = activeLayer();
+    editorCardBg.style.display = 'none';
+    editorCardSprite.style.display = 'none';
+    if (!layer) { updateSpriteBoxesVisibility(); return; }
+    if (layer.type === 'background') {
+      editorCardBg.style.display = '';
+      bgLayerName.textContent = layer.name;
+      sourceImage.src = layer.img.src;
+      zoomSlider.value = layer.keyframes[activeKf].zoom;
+      updateZoomLabel();
+      wobbleToggle.checked = layer.wobble.enabled;
+      wobbleAmount.value = Math.round(layer.wobble.amount * 100);
+      wobbleAmount.disabled = !layer.wobble.enabled;
+      updateWobbleLabel();
+      requestAnimationFrame(renderCropOverlays);
+    } else {
+      editorCardSprite.style.display = '';
+      spriteLayerName.textContent = layer.name;
+      scaleSlider.value = layer.keyframes[activeKf].scale;
+      rotationSlider.value = layer.keyframes[activeKf].rotation;
+      updateScaleLabel();
+      updateRotationLabel();
+    }
+    updateSpriteBoxesVisibility();
+    redrawActiveFrame();
+  }
+
+  // ---------- Keyframe tab switching (shared active tab across layers) ----------
+  function setActiveKf(kf) {
+    activeKf = kf;
+    bgKfTabs.forEach(b => b.classList.toggle('active', b.dataset.kf === kf));
+    spriteKfTabs.forEach(b => b.classList.toggle('active', b.dataset.kf === kf));
+    const layer = activeLayer();
+    if (layer && layer.type === 'background') {
+      zoomSlider.value = layer.keyframes[kf].zoom;
+      updateZoomLabel();
+      renderCropOverlays();
+    } else if (layer && layer.type === 'sprite') {
+      scaleSlider.value = layer.keyframes[kf].scale;
+      rotationSlider.value = layer.keyframes[kf].rotation;
+      updateScaleLabel();
+      updateRotationLabel();
+    }
+    updateSpriteBoxesVisibility();
+    redrawActiveFrame();
+  }
+  bgKfTabs.forEach(btn => btn.addEventListener('click', () => setActiveKf(btn.dataset.kf)));
+  spriteKfTabs.forEach(btn => btn.addEventListener('click', () => setActiveKf(btn.dataset.kf)));
+
+  // ---------- Background (crop) editor ----------
+  zoomSlider.addEventListener('input', () => {
+    const layer = activeLayer();
+    if (!layer) return;
+    layer.keyframes[activeKf].zoom = parseFloat(zoomSlider.value);
+    updateZoomLabel();
+    renderCropOverlays();
+    redrawActiveFrame();
+  });
+  function updateZoomLabel() { zoomValue.textContent = parseFloat(zoomSlider.value).toFixed(2) + 'x'; }
+
+  wobbleToggle.addEventListener('change', () => {
+    const layer = activeLayer();
+    if (!layer || !layer.wobble) return;
+    layer.wobble.enabled = wobbleToggle.checked;
+    wobbleAmount.disabled = !layer.wobble.enabled;
+  });
+  wobbleAmount.addEventListener('input', () => {
+    const layer = activeLayer();
+    if (!layer || !layer.wobble) return;
+    layer.wobble.amount = parseFloat(wobbleAmount.value) / 100;
+    updateWobbleLabel();
+  });
+  function updateWobbleLabel() { wobbleValue.textContent = wobbleAmount.value + '%'; }
+
+  ['start', 'end'].forEach(kf => {
+    crossEls[kf].addEventListener('pointerdown', e => {
+      const layer = activeLayer();
+      if (!layer || layer.type !== 'background') return;
+      dragging = { mode: 'crosshair', kf };
+      setActiveKf(kf);
+      e.preventDefault();
+    });
+  });
+
+  function getRect(kf, natW, natH) {
+    const { w: outW, h: outH } = getOutputSize();
+    const outputAspect = outW / outH;
+    let rectW = natW / kf.zoom;
+    let rectH = rectW / outputAspect;
+    if (rectH > natH) { rectH = natH; rectW = rectH * outputAspect; }
+    if (rectW > natW) { rectW = natW; rectH = rectW / outputAspect; }
+    const cx = kf.cx * natW;
+    const cy = kf.cy * natH;
+    let x = cx - rectW / 2;
+    let y = cy - rectH / 2;
+    x = Math.min(Math.max(x, 0), natW - rectW);
+    y = Math.min(Math.max(y, 0), natH - rectH);
+    return { x, y, w: rectW, h: rectH };
+  }
+  function lerpRect(a, b, t) {
+    return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), w: lerp(a.w, b.w, t), h: lerp(a.h, b.h, t) };
+  }
+
+  function renderCropOverlays() {
+    const layer = activeLayer();
+    if (!layer || layer.type !== 'background' || !layer.naturalW) return;
+    const imgRect = sourceImage.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    if (imgRect.width === 0) return;
+    const offsetX = imgRect.left - stageRect.left;
+    const offsetY = imgRect.top - stageRect.top;
+    const scale = imgRect.width / layer.naturalW;
+
+    ['start', 'end'].forEach(kf => {
+      const r = getRect(layer.keyframes[kf], layer.naturalW, layer.naturalH);
+      const el = rectEls[kf];
+      el.style.left = (offsetX + r.x * scale) + 'px';
+      el.style.top = (offsetY + r.y * scale) + 'px';
+      el.style.width = (r.w * scale) + 'px';
+      el.style.height = (r.h * scale) + 'px';
+
+      const c = crossEls[kf];
+      c.style.left = (offsetX + layer.keyframes[kf].cx * layer.naturalW * scale) + 'px';
+      c.style.top = (offsetY + layer.keyframes[kf].cy * layer.naturalH * scale) + 'px';
+      c.classList.toggle('dim', kf !== activeKf);
+    });
+  }
+  window.addEventListener('resize', () => { renderCropOverlays(); positionSpriteBoxes(); });
+
+  // ---------- Sprite (position/scale/rotation) editor ----------
+  scaleSlider.addEventListener('input', () => {
+    const layer = activeLayer();
+    if (!layer) return;
+    layer.keyframes[activeKf].scale = parseFloat(scaleSlider.value);
+    updateScaleLabel();
+    positionSpriteBoxes();
+    redrawActiveFrame();
+  });
+  rotationSlider.addEventListener('input', () => {
+    const layer = activeLayer();
+    if (!layer) return;
+    layer.keyframes[activeKf].rotation = parseFloat(rotationSlider.value);
+    updateRotationLabel();
+    positionSpriteBoxes();
+    redrawActiveFrame();
+  });
+  function updateScaleLabel() { scaleValue.textContent = parseFloat(scaleSlider.value).toFixed(2) + 'x'; }
+  function updateRotationLabel() { rotationValue.textContent = Math.round(parseFloat(rotationSlider.value)) + '°'; }
+
+  function ensureSpriteBoxEls() {
+    ['start', 'end'].forEach(kf => {
+      if (spriteBoxEls[kf]) return;
+      const el = document.createElement('div');
+      el.className = 'sprite-box ' + kf;
+      el.style.display = 'none';
+      previewWrap.appendChild(el);
+      spriteBoxEls[kf] = el;
+      el.addEventListener('pointerdown', e => {
+        const layer = activeLayer();
+        if (!layer || layer.type !== 'sprite' || kf !== activeKf) return;
+        const canvasRect = canvas.getBoundingClientRect();
+        const nx = (e.clientX - canvasRect.left) / canvasRect.width;
+        const ny = (e.clientY - canvasRect.top) / canvasRect.height;
+        dragging = {
+          mode: 'sprite', kf,
+          grabDX: nx - layer.keyframes[kf].x,
+          grabDY: ny - layer.keyframes[kf].y
+        };
+        e.preventDefault();
+      });
+    });
+  }
+  ensureSpriteBoxEls();
+
+  function updateSpriteBoxesVisibility() {
+    const layer = activeLayer();
+    const show = layer && layer.type === 'sprite';
+    ['start', 'end'].forEach(kf => {
+      const el = spriteBoxEls[kf];
+      el.style.display = show ? '' : 'none';
+      el.classList.toggle('active', kf === activeKf);
+      el.classList.toggle('inactive', kf !== activeKf);
+    });
+    if (show) positionSpriteBoxes();
+  }
+
+  function positionSpriteBoxes() {
+    const layer = activeLayer();
+    if (!layer || layer.type !== 'sprite') return;
+    const canvasRect = canvas.getBoundingClientRect();
+    const wrapRect = previewWrap.getBoundingClientRect();
+    if (canvasRect.width === 0) return;
+    const scaleX = canvasRect.width / canvas.width;
+    const scaleY = canvasRect.height / canvas.height;
+    ['start', 'end'].forEach(kf => {
+      const k = layer.keyframes[kf];
+      const w = layer.naturalW * k.scale * scaleX;
+      const h = layer.naturalH * k.scale * scaleY;
+      const cxPx = k.x * canvas.width * scaleX + (canvasRect.left - wrapRect.left);
+      const cyPx = k.y * canvas.height * scaleY + (canvasRect.top - wrapRect.top);
+      const el = spriteBoxEls[kf];
+      el.style.left = (cxPx - w / 2) + 'px';
+      el.style.top = (cyPx - h / 2) + 'px';
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+      el.style.transform = 'rotate(' + k.rotation + 'deg)';
+    });
+  }
+
+  window.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    if (dragging.mode === 'crosshair') {
+      const layer = activeLayer();
+      if (!layer) return;
+      const imgRect = sourceImage.getBoundingClientRect();
+      if (imgRect.width === 0) return;
+      let x = clamp01((e.clientX - imgRect.left) / imgRect.width);
+      let y = clamp01((e.clientY - imgRect.top) / imgRect.height);
+      layer.keyframes[dragging.kf].cx = x;
+      layer.keyframes[dragging.kf].cy = y;
+      renderCropOverlays();
+      redrawActiveFrame();
+    } else if (dragging.mode === 'sprite') {
+      const layer = activeLayer();
+      if (!layer) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      if (canvasRect.width === 0) return;
+      const nx = (e.clientX - canvasRect.left) / canvasRect.width;
+      const ny = (e.clientY - canvasRect.top) / canvasRect.height;
+      layer.keyframes[dragging.kf].x = nx - dragging.grabDX;
+      layer.keyframes[dragging.kf].y = ny - dragging.grabDY;
+      positionSpriteBoxes();
+      redrawActiveFrame();
+    }
+  });
+  window.addEventListener('pointerup', () => { dragging = null; });
+
+  // ---------- Output size ----------
+  function getOutputSize() {
+    const val = outputPreset.value;
+    if (val === 'auto') {
+      const base = layers.find(l => l.type === 'background') || layers[0];
+      let w = base ? base.naturalW : 1280;
+      let h = base ? base.naturalH : 720;
+      const maxDim = 1280;
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      return { w, h };
+    }
+    const [w, h] = val.split('x').map(Number);
+    return { w, h };
+  }
+  function setupOutputSize() {
+    const { w, h } = getOutputSize();
+    canvas.width = w;
+    canvas.height = h;
+  }
+  outputPreset.addEventListener('change', () => {
+    setupOutputSize();
+    redrawActiveFrame();
+    requestAnimationFrame(() => { renderCropOverlays(); positionSpriteBoxes(); });
+  });
+
+  // ---------- Easing ----------
+  const easings = {
+    linear: t => t,
+    easeInOut: t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+    easeIn: t => t * t,
+    easeOut: t => 1 - (1 - t) * (1 - t)
+  };
+
+  // ---------- Compositing / drawing ----------
+  function drawLayerAtEased(layer, eased, elapsedSec) {
+    ctx.save();
+    ctx.globalAlpha = layer.opacity;
+    if (layer.type === 'background') {
+      const startRect = getRect(layer.keyframes.start, layer.naturalW, layer.naturalH);
+      const endRect = getRect(layer.keyframes.end, layer.naturalW, layer.naturalH);
+      let r = lerpRect(startRect, endRect, eased);
+      if (layer.wobble && layer.wobble.enabled && layer.wobble.amount > 0) {
+        const amt = layer.wobble.amount;
+        const cx = r.x + r.w / 2 + Math.sin(elapsedSec * 0.9) * 0.02 * amt * r.w;
+        const cy = r.y + r.h / 2 + Math.cos(elapsedSec * 1.3) * 0.015 * amt * r.h;
+        const breathe = 1 + 0.01 * amt * Math.sin(elapsedSec * 0.5);
+        const w = r.w * breathe, h = r.h * breathe;
+        let x = cx - w / 2, y = cy - h / 2;
+        x = Math.min(Math.max(x, 0), Math.max(0, layer.naturalW - w));
+        y = Math.min(Math.max(y, 0), Math.max(0, layer.naturalH - h));
+        r = { x, y, w: Math.min(w, layer.naturalW), h: Math.min(h, layer.naturalH) };
+      }
+      ctx.drawImage(layer.img, r.x, r.y, r.w, r.h, 0, 0, canvas.width, canvas.height);
+    } else {
+      const s = layer.keyframes.start, e = layer.keyframes.end;
+      const x = lerp(s.x, e.x, eased) * canvas.width;
+      const y = lerp(s.y, e.y, eased) * canvas.height;
+      const scale = lerp(s.scale, e.scale, eased);
+      const rotation = lerp(s.rotation, e.rotation, eased);
+      const w = layer.naturalW * scale, h = layer.naturalH * scale;
+      ctx.translate(x, y);
+      ctx.rotate(rotation * Math.PI / 180);
+      ctx.drawImage(layer.img, -w / 2, -h / 2, w, h);
+    }
+    ctx.restore();
+  }
+
+  function drawCompositeAtT(rawT, mode, elapsedSec) {
+    let t = rawT;
+    if (mode === 'pingpong') t = rawT < 0.5 ? rawT * 2 : (1 - rawT) * 2;
+    const eased = easings[easingSelect.value](clamp01(t));
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    layers.forEach(layer => drawLayerAtEased(layer, eased, elapsedSec || 0));
+  }
+
+  function redrawActiveFrame() {
+    if (playing || recording) return;
+    drawCompositeAtT(activeKf === 'start' ? 0 : 1, 'once', performance.now() / 1000);
+  }
+
+  // Idle loop: keeps the "wobble" preview alive on the edit canvas while not playing/recording.
+  function idleTick(now) {
+    if (!playing && !recording && layers.length) {
+      drawCompositeAtT(activeKf === 'start' ? 0 : 1, 'once', now / 1000);
+    }
+    requestAnimationFrame(idleTick);
+  }
+  requestAnimationFrame(idleTick);
+
+  // ---------- Preview playback ----------
+  playBtn.addEventListener('click', () => { if (!playing) playPreview(); });
+  function playPreview() {
+    playing = true;
+    playBtn.disabled = true;
+    exportBtn.disabled = true;
+    const duration = parseFloat(durationInput.value) * 1000;
+    const mode = playModeSelect.value;
+    const start = performance.now();
+    function step(now) {
+      const elapsed = now - start;
+      const rawT = Math.min(1, elapsed / duration);
+      drawCompositeAtT(rawT, mode, now / 1000);
+      if (rawT < 1) {
+        requestAnimationFrame(step);
+      } else {
+        playing = false;
+        playBtn.disabled = false;
+        exportBtn.disabled = false;
+        redrawActiveFrame();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ---------- Export (WebM via MediaRecorder) ----------
+  exportBtn.addEventListener('click', () => { if (!recording) startExport(); });
+
+  function pickMimeType() {
+    const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    for (const c of candidates) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
+    }
+    return '';
+  }
+
+  function startExport() {
+    if (!window.MediaRecorder || !canvas.captureStream) {
+      exportStatus.textContent = 'このブラウザは動画書き出し（MediaRecorder）に対応していません。';
+      return;
+    }
+    const mimeType = pickMimeType();
+    if (!mimeType) {
+      exportStatus.textContent = 'このブラウザは対応するWebMコーデックがありません。';
+      return;
+    }
+    const fps = parseInt(fpsSelect.value, 10);
+    const mode = playModeSelect.value;
+    const singleDuration = parseFloat(durationInput.value) * 1000;
+    const totalDuration = mode === 'pingpong' ? singleDuration * 2 : singleDuration;
+
+    recording = true;
+    playBtn.disabled = true;
+    exportBtn.disabled = true;
+    exportBtn.textContent = '書き出し中...';
+
+    const stream = canvas.captureStream(fps);
+    const recorder = new MediaRecorder(stream, { mimeType });
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'motion-' + Date.now() + '.webm';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+      recording = false;
+      playBtn.disabled = false;
+      exportBtn.disabled = false;
+      exportBtn.textContent = 'WebM動画として書き出す';
+      exportStatus.textContent = '書き出し完了！ダウンロードを確認してください。';
+      redrawActiveFrame();
+    };
+
+    recorder.start();
+    const start = performance.now();
+    function step(now) {
+      const elapsed = now - start;
+      const rawT = Math.min(1, elapsed / totalDuration);
+      drawCompositeAtT(rawT, mode, now / 1000);
+      const remaining = Math.max(0, (totalDuration - elapsed) / 1000);
+      exportStatus.textContent = '書き出し中... 残り約' + remaining.toFixed(1) + '秒';
+      if (elapsed < totalDuration) {
+        requestAnimationFrame(step);
+      } else {
+        recorder.stop();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  const ro = new ResizeObserver(() => { renderCropOverlays(); positionSpriteBoxes(); });
+  ro.observe(stage);
+  ro.observe(previewWrap);
+})();
+</script>
+</body>
+</html>
