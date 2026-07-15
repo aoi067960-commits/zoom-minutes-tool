@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>画像モーションツール（Ken Burns + レイヤー合成）</title>
+<title>Zoom議事録・要約ツール（無料・ブラウザ内AI）</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -15,11 +15,11 @@
     --accent: #4f6df5;
     --accent-hover: #3d5ae0;
     --danger: #e0554f;
-    --start-color: #4f9d5a;
-    --end-color: #e0554f;
-    --bg-badge: #4f6df5;
-    --sprite-badge: #b25fd1;
+    --danger-hover: #c94842;
+    --success: #4f9d5a;
+    --record: #e0554f;
     --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --code-bg: #f0f1f4;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -31,11 +31,11 @@
       --accent: #6d87ff;
       --accent-hover: #8398ff;
       --danger: #f0716c;
-      --start-color: #6fbf7c;
-      --end-color: #f0716c;
-      --bg-badge: #6d87ff;
-      --sprite-badge: #cd8ee6;
+      --danger-hover: #f58c87;
+      --success: #6fbf7c;
+      --record: #f0716c;
       --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+      --code-bg: #262a31;
     }
   }
   * { box-sizing: border-box; }
@@ -47,7 +47,7 @@
     min-height: 100vh;
   }
   .wrap {
-    max-width: 1180px;
+    max-width: 980px;
     margin: 0 auto;
     padding: 32px 20px 80px;
   }
@@ -58,967 +58,979 @@
   }
   .subtitle {
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 14px;
     margin: 0 0 24px;
-  }
-  .layout {
-    display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
-    gap: 20px;
-  }
-  @media (max-width: 860px) {
-    .layout { grid-template-columns: 1fr; }
   }
   .card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
     box-shadow: var(--shadow);
-    padding: 16px;
   }
-  .card + .card { margin-top: 20px; }
   .card h2 {
-    font-size: 14px;
-    margin: 0 0 12px;
-    font-weight: 600;
-  }
-  .add-row { display: flex; gap: 10px; margin-bottom: 4px; }
-  .dropzone {
-    flex: 1;
-    border: 2px dashed var(--border);
-    border-radius: 10px;
-    padding: 22px 10px;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 12px;
-    cursor: pointer;
-    transition: border-color .15s, color .15s;
-  }
-  .dropzone b { display: block; font-size: 13px; color: var(--text); margin-bottom: 2px; }
-  .dropzone:hover, .dropzone.drag {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .dropzone.bgzone:hover, .dropzone.bgzone.drag { border-color: var(--bg-badge); }
-  .dropzone.spritezone:hover, .dropzone.spritezone.drag { border-color: var(--sprite-badge); }
-
-  .layer-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-  .layer-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  .layer-row.active { border-color: var(--accent); background: rgba(79,109,245,0.08); }
-  .layer-row img.thumb {
-    width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); background: #0002;
-    flex-shrink: 0;
-  }
-  .layer-info { flex: 1; min-width: 0; }
-  .layer-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .badge {
-    display: inline-block; font-size: 10px; font-weight: 700; color: #fff; border-radius: 4px;
-    padding: 1px 6px; margin-top: 2px;
-  }
-  .badge.bg { background: var(--bg-badge); }
-  .badge.sprite { background: var(--sprite-badge); }
-  .layer-opacity { width: 60px; }
-  .layer-btns { display: flex; gap: 2px; flex-shrink: 0; }
-  .icon-btn {
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-muted);
-    border-radius: 6px;
-    width: 26px; height: 26px;
-    font-size: 12px;
-    cursor: pointer;
-  }
-  .icon-btn:hover { color: var(--text); border-color: var(--accent); }
-  .empty-hint { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
-
-  .kf-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .kf-tabs button {
-    flex: 1;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .kf-tabs button[data-kf="start"].active {
-    background: var(--start-color);
-    border-color: var(--start-color);
-    color: #fff;
-  }
-  .kf-tabs button[data-kf="end"].active {
-    background: var(--end-color);
-    border-color: var(--end-color);
-    color: #fff;
-  }
-  .stage {
-    position: relative;
-    width: 100%;
-    max-height: 420px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: repeating-conic-gradient(#0000 0 25%, #0000 0), #00000010;
-    border-radius: 8px;
-    overflow: hidden;
-    user-select: none;
-    touch-action: none;
-  }
-  .stage img {
-    display: block;
-    max-width: 100%;
-    max-height: 420px;
-    pointer-events: none;
-  }
-  .rect-overlay {
-    position: absolute;
-    border: 2px solid;
-    border-radius: 4px;
-    pointer-events: none;
-  }
-  .rect-overlay.start { border-color: var(--start-color); }
-  .rect-overlay.end { border-color: var(--end-color); opacity: .55; }
-  .crosshair {
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    margin-left: -11px;
-    margin-top: -11px;
-    border-radius: 50%;
-    border: 3px solid #fff;
-    box-shadow: 0 0 0 2px rgba(0,0,0,.4);
-    cursor: grab;
-  }
-  .crosshair.start { background: var(--start-color); }
-  .crosshair.end { background: var(--end-color); opacity: .85; }
-  .crosshair.dim { opacity: .35; cursor: default; }
-  .field {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 12px;
-    font-size: 13px;
+    flex-wrap: wrap;
   }
-  .field label { color: var(--text-muted); flex-shrink: 0; }
-  .wobble-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-  .field input[type="range"] { flex: 1; }
-  .field input[type="number"], .field select {
-    width: 100px;
-    padding: 6px 8px;
-    border-radius: 6px;
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-muted);
+  }
+  .field {
+    margin-bottom: 14px;
+  }
+  .row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .row .field {
+    flex: 1;
+    min-width: 160px;
+  }
+  input[type="text"],
+  input[type="password"],
+  input[type="date"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 9px 11px;
     border: 1px solid var(--border);
+    border-radius: 8px;
     background: var(--bg);
     color: var(--text);
-    font-size: 13px;
-  }
-  .field .val { width: 46px; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
-  .row { display: flex; gap: 10px; }
-  .row .field { flex: 1; }
-  button.primary {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: none;
-    background: var(--accent);
-    color: #fff;
     font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    margin-bottom: 8px;
+    font-family: inherit;
   }
-  button.primary:hover { background: var(--accent-hover); }
-  button.primary:disabled { opacity: .5; cursor: not-allowed; }
-  button.secondary {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text);
+  textarea {
+    resize: vertical;
+    line-height: 1.5;
+  }
+  #transcript {
+    min-height: 220px;
+  }
+  #output-area textarea {
+    min-height: 320px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
     font-size: 13px;
-    cursor: pointer;
-    margin-bottom: 8px;
-  }
-  .preview-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  canvas#previewCanvas {
-    max-width: 100%;
-    display: block;
-  }
-  .sprite-box {
-    position: absolute;
-    border: 2px solid;
-    border-radius: 4px;
-    box-sizing: border-box;
-  }
-  .sprite-box.start { border-color: var(--start-color); }
-  .sprite-box.end { border-color: var(--end-color); }
-  .sprite-box.active { cursor: grab; }
-  .sprite-box.inactive { opacity: .4; pointer-events: none; }
-  .status {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-align: center;
-    margin-top: 4px;
-    min-height: 16px;
   }
   .hint {
     font-size: 12px;
     color: var(--text-muted);
+    margin-top: 4px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  .btn-primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .btn-record {
+    background: var(--record);
+    color: #fff;
+  }
+  .btn-record:hover:not(:disabled) {
+    filter: brightness(0.92);
+  }
+  .btn-record:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: var(--code-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    filter: brightness(0.96);
+  }
+  .btn-secondary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    align-items: center;
+  }
+  .status {
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+  .status.error { color: var(--danger); }
+  .status.success { color: var(--success); }
+  .status.loading { color: var(--text-muted); }
+  .spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: -2px;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .model-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--code-bg);
+    color: var(--text-muted);
+  }
+  .model-badge.ready { background: rgba(79,157,90,0.15); color: var(--success); }
+  .progress-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--code-bg);
+    overflow: hidden;
+    margin-top: 10px;
+    display: none;
+  }
+  .progress-track.visible { display: block; }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.2s ease;
+  }
+  .note-box {
+    font-size: 12px;
+    color: var(--text-muted);
     line-height: 1.6;
-    margin: 8px 0 0;
+    background: var(--code-bg);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+  .warn-box {
+    font-size: 13px;
+    color: var(--danger);
+    background: rgba(224,85,79,0.1);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .warn-box.visible { display: block; }
+  .consent-box {
+    font-size: 12px;
+    color: var(--text);
+    background: rgba(224,85,79,0.08);
+    border: 1px solid rgba(224,85,79,0.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+  #output-wrap { display: none; }
+  #output-wrap.visible { display: block; }
+  .rendered {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-size: 14px;
+    line-height: 1.75;
+    max-height: 560px;
+    overflow-y: auto;
+  }
+  .rendered h1, .rendered h2, .rendered h3 {
+    margin: 18px 0 8px;
+  }
+  .rendered h1:first-child, .rendered h2:first-child, .rendered h3:first-child { margin-top: 0; }
+  .rendered ul, .rendered ol { padding-left: 22px; }
+  .rendered table {
+    border-collapse: collapse;
+    margin: 10px 0;
+  }
+  .rendered th, .rendered td {
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .view-tabs {
+    display: flex;
+    gap: 6px;
+  }
+  .view-tab {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .view-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  #recorded-audio {
+    display: none;
+    width: 100%;
+    margin-top: 10px;
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>画像モーションツール</h1>
-  <p class="subtitle">背景・キャラクターなどをレイヤーごとに読み込み、それぞれ独立にパン/ズーム/移動/回転させて、Ken Burns風のパララックス動画をWebMとして書き出せます。</p>
+  <h1>Zoom議事録・要約ツール</h1>
+  <p class="subtitle">会議を録音して自動文字起こし、またはテキストを貼り付けるだけで、ブラウザ内で動くAIが議事録形式に整形・要約します。API課金は発生しません。</p>
 
-  <div class="layout">
-    <div class="col-left">
-      <div class="card">
-        <h2>1. レイヤーを追加</h2>
-        <div class="add-row">
-          <div class="dropzone bgzone" id="dropzoneBg"><b>背景を追加</b>クリック / ドラッグ&ドロップ<br>（パン&ズームで動かす）</div>
-          <div class="dropzone spritezone" id="dropzoneSprite"><b>キャラクター/前景を追加</b>クリック / ドラッグ&ドロップ<br>（位置・拡縮・回転で動かす、透過PNG推奨）</div>
-        </div>
-        <input type="file" id="fileInputBg" accept="image/*" hidden>
-        <input type="file" id="fileInputSprite" accept="image/*" hidden>
+  <div class="warn-box" id="webgpu-warn">
+    お使いのブラウザはWebGPUに対応していないため、議事録生成AIを利用できません。最新版のChromeまたはEdge（PC版）でお試しください。
+  </div>
 
-        <div class="layer-list" id="layerList"></div>
-        <p class="empty-hint" id="emptyHint">まだレイヤーがありません。上のいずれかから画像を追加してください。</p>
+  <div class="card">
+    <h2>
+      1. 要約AIモデル
+      <span class="model-badge" id="model-badge">未読み込み</span>
+    </h2>
+    <div class="note-box">
+      完全無料・課金なしで動作します。初回のみモデルデータ（数百MB〜2GB程度）をブラウザにダウンロードし、以降はこの端末のキャッシュから読み込まれます。
+      文字起こしデータが外部サーバーに送信されることはありません。処理はすべてこの端末のブラウザ内で完結します。
+    </div>
+    <div class="field">
+      <label for="model-select">モデルを選択</label>
+      <select id="model-select"></select>
+      <p class="hint">値が小さいモデルほど高速・軽量ですが、要約の質はClaudeなどのクラウドAIより劣ります。まずは既定のモデルでお試しください。</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="load-model-btn">モデルを読み込む</button>
+    </div>
+    <div class="progress-track" id="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="status" id="model-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 会議情報（任意）</h2>
+    <div class="row">
+      <div class="field">
+        <label for="meeting-title">会議名</label>
+        <input type="text" id="meeting-title" placeholder="例）定例ミーティング">
       </div>
-
-      <div class="card" id="editorCardBg" style="display:none;">
-        <h2>2. フレームを設定（背景レイヤー：<span id="bgLayerName"></span>）</h2>
-        <div class="kf-tabs">
-          <button data-kf="start" class="active">開始フレーム</button>
-          <button data-kf="end">終了フレーム</button>
-        </div>
-        <div class="stage" id="stage">
-          <img id="sourceImage" alt="">
-          <div class="rect-overlay start" id="rectStart"></div>
-          <div class="rect-overlay end" id="rectEnd"></div>
-          <div class="crosshair start" id="crossStart"></div>
-          <div class="crosshair end" id="crossEnd"></div>
-        </div>
-        <div class="field" style="margin-top:12px;">
-          <label>ズーム</label>
-          <input type="range" id="zoomSlider" min="1" max="4" step="0.01" value="1">
-          <span class="val" id="zoomValue">1.00x</span>
-        </div>
-        <div class="field">
-          <label class="wobble-label"><input type="checkbox" id="wobbleToggle"> 浮遊感を追加</label>
-          <input type="range" id="wobbleAmount" min="0" max="100" step="5" value="30" disabled>
-          <span class="val" id="wobbleValue">30%</span>
-        </div>
-        <p class="hint">〇印をドラッグして中心位置を移動、スライダーでズーム倍率を調整します。緑=開始、赤=終了。「浮遊感」は開始→終了の動きに、微妙な揺れを常時重ねます。</p>
-      </div>
-
-      <div class="card" id="editorCardSprite" style="display:none;">
-        <h2>2. フレームを設定（前景レイヤー：<span id="spriteLayerName"></span>）</h2>
-        <div class="kf-tabs" id="spriteKfTabs">
-          <button data-kf="start" class="active">開始フレーム</button>
-          <button data-kf="end">終了フレーム</button>
-        </div>
-        <div class="field">
-          <label>サイズ</label>
-          <input type="range" id="scaleSlider" min="0.1" max="3" step="0.01" value="1">
-          <span class="val" id="scaleValue">1.00x</span>
-        </div>
-        <div class="field">
-          <label>回転</label>
-          <input type="range" id="rotationSlider" min="-45" max="45" step="1" value="0">
-          <span class="val" id="rotationValue">0°</span>
-        </div>
-        <p class="hint">右側のプレビュー画面上で緑/赤の枠を直接ドラッグして位置を移動できます（枠=開始/終了）。</p>
+      <div class="field">
+        <label for="meeting-date">日時</label>
+        <input type="date" id="meeting-date">
       </div>
     </div>
+    <div class="field">
+      <label for="meeting-participants">参加者</label>
+      <input type="text" id="meeting-participants" placeholder="例）田中, 佐藤, 鈴木（未入力の場合は文字起こしから自動推定）">
+    </div>
+  </div>
 
-    <div class="col-right">
-      <div class="card">
-        <h2>3. アニメーション設定</h2>
-        <div class="row">
-          <div class="field">
-            <label>再生時間(秒)</label>
-            <input type="number" id="duration" min="0.5" max="30" step="0.5" value="5">
-          </div>
-          <div class="field">
-            <label>FPS</label>
-            <select id="fps">
-              <option value="24">24</option>
-              <option value="30" selected>30</option>
-              <option value="60">60</option>
-            </select>
-          </div>
-        </div>
-        <div class="field">
-          <label>イージング</label>
-          <select id="easing">
-            <option value="linear">等速（linear）</option>
-            <option value="easeInOut" selected>滑らかに加減速（easeInOut）</option>
-            <option value="easeIn">ゆっくり開始</option>
-            <option value="easeOut">ゆっくり終了</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>再生モード</label>
-          <select id="playMode">
-            <option value="once" selected>開始→終了（1回）</option>
-            <option value="pingpong">開始→終了→開始（往復）</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>出力サイズ</label>
-          <select id="outputPreset">
-            <option value="auto">元画像に合わせる</option>
-            <option value="1280x720">1280×720（横）</option>
-            <option value="1080x1080">1080×1080（正方形）</option>
-            <option value="1080x1920">1080×1920（縦）</option>
-          </select>
-        </div>
-      </div>
+  <div class="card">
+    <h2>3. 会議を録音して自動文字起こし（任意）</h2>
+    <div class="consent-box">
+      他の参加者の声を録音する場合は、事前に参加者全員の同意を得てください。国・地域や社内規定によっては、同意なしの録音が法律・規約に抵触する場合があります。
+    </div>
+    <div class="warn-box" id="record-warn">
+      このブラウザは録音機能（マイク入力）に対応していません。
+    </div>
+    <div class="note-box">
+      録音データ・文字起こし処理はすべてこの端末のブラウザ内で行われ、外部には送信されません。「録音開始」を押すとマイクの利用許可、続いて画面共有の選択ダイアログが表示されます。
+      相手の声（Zoomの再生音声）も録音したい場合は、共有ダイアログで画面全体またはウィンドウを選び「システム音声を共有」にチェックを入れてください（Windows + Chrome/Edgeでの動作を想定。対応していない環境や共有をキャンセルした場合は自動的にマイクのみの録音になります）。
+      <br>※ このファイルを<code>file://</code>のまま直接開いている場合、ブラウザの制限により録音機能が動作しないことがあります。動作しない場合は簡易ローカルサーバー経由で開いてください。
+    </div>
+    <div class="btn-row">
+      <button class="btn-record" id="record-btn">録音開始</button>
+      <span class="model-badge" id="record-timer">00:00</span>
+      <button class="btn-secondary" id="discard-btn" disabled>録音を破棄</button>
+    </div>
+    <div class="status" id="record-status"></div>
+    <audio id="recorded-audio" controls></audio>
 
-      <div class="card">
-        <h2>4. プレビュー・書き出し</h2>
-        <div class="preview-wrap" id="previewWrap">
-          <canvas id="previewCanvas" width="640" height="360"></canvas>
-        </div>
-        <div style="height:12px;"></div>
-        <button class="secondary" id="playBtn" disabled>プレビュー再生</button>
-        <button class="primary" id="exportBtn" disabled>WebM動画として書き出す</button>
-        <div class="status" id="exportStatus"></div>
+    <div class="field" style="margin-top:18px;">
+      <label for="whisper-model-select">文字起こしAIモデル</label>
+      <select id="whisper-model-select">
+        <option value="Xenova/whisper-tiny">Xenova/whisper-tiny（軽量・高速、目安75MB）</option>
+        <option value="Xenova/whisper-base" selected>Xenova/whisper-base（標準・推奨、目安145MB）</option>
+        <option value="Xenova/whisper-small">Xenova/whisper-small（高精度・低速、目安250MB）</option>
+      </select>
+      <p class="hint">録音時間が長いほど処理に時間がかかります（1時間の録音で数分〜十数分程度が目安）。</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="transcribe-btn" disabled>文字起こしを実行</button>
+    </div>
+    <div class="progress-track" id="whisper-progress-track"><div class="progress-fill" id="whisper-progress-fill"></div></div>
+    <div class="status" id="whisper-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. 文字起こしを確認して議事録を生成</h2>
+    <div class="field">
+      <label for="transcript">文字起こし・メモ</label>
+      <textarea id="transcript" placeholder="上の「録音して自動文字起こし」で自動入力するか、Zoomの文字起こしなどをここに直接貼り付けてください。"></textarea>
+      <p class="hint">Zoomの文字起こしは「その他 → トランスクリプトを表示 → コピー」で取得できます。ローカルAIは扱える文章量に限りがあるため、長すぎる場合はエラーになることがあります（その際は分割して実行してください）。</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" id="generate-btn">議事録を生成</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="card" id="output-wrap">
+    <h2>
+      生成結果
+      <div class="view-tabs">
+        <button class="view-tab active" id="tab-rendered">プレビュー</button>
+        <button class="view-tab" id="tab-raw">Markdown</button>
       </div>
+    </h2>
+    <div id="output-area">
+      <div class="rendered" id="rendered-view"></div>
+      <textarea id="raw-view" style="display:none" readonly></textarea>
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn-secondary" id="copy-btn">Markdownをコピー</button>
+      <button class="btn-secondary" id="download-btn">.mdをダウンロード</button>
     </div>
   </div>
 </div>
 
-<script>
-(function () {
-  // ---------- DOM ----------
-  const dropzoneBg = document.getElementById('dropzoneBg');
-  const dropzoneSprite = document.getElementById('dropzoneSprite');
-  const fileInputBg = document.getElementById('fileInputBg');
-  const fileInputSprite = document.getElementById('fileInputSprite');
-  const layerListEl = document.getElementById('layerList');
-  const emptyHint = document.getElementById('emptyHint');
+<script type="module">
+  const titleInput = document.getElementById('meeting-title');
+  const dateInput = document.getElementById('meeting-date');
+  const participantsInput = document.getElementById('meeting-participants');
+  const transcriptInput = document.getElementById('transcript');
+  const generateBtn = document.getElementById('generate-btn');
+  const statusEl = document.getElementById('status');
 
-  const editorCardBg = document.getElementById('editorCardBg');
-  const editorCardSprite = document.getElementById('editorCardSprite');
-  const bgLayerName = document.getElementById('bgLayerName');
-  const spriteLayerName = document.getElementById('spriteLayerName');
+  const webgpuWarn = document.getElementById('webgpu-warn');
+  const modelSelect = document.getElementById('model-select');
+  const loadModelBtn = document.getElementById('load-model-btn');
+  const modelBadge = document.getElementById('model-badge');
+  const modelStatus = document.getElementById('model-status');
+  const progressTrack = document.getElementById('progress-track');
+  const progressFill = document.getElementById('progress-fill');
 
-  const stage = document.getElementById('stage');
-  const sourceImage = document.getElementById('sourceImage');
-  const rectEls = { start: document.getElementById('rectStart'), end: document.getElementById('rectEnd') };
-  const crossEls = { start: document.getElementById('crossStart'), end: document.getElementById('crossEnd') };
-  const bgKfTabs = document.querySelectorAll('#editorCardBg .kf-tabs button');
-  const zoomSlider = document.getElementById('zoomSlider');
-  const zoomValue = document.getElementById('zoomValue');
-  const wobbleToggle = document.getElementById('wobbleToggle');
-  const wobbleAmount = document.getElementById('wobbleAmount');
-  const wobbleValue = document.getElementById('wobbleValue');
+  const outputWrap = document.getElementById('output-wrap');
+  const renderedView = document.getElementById('rendered-view');
+  const rawView = document.getElementById('raw-view');
+  const tabRendered = document.getElementById('tab-rendered');
+  const tabRaw = document.getElementById('tab-raw');
+  const copyBtn = document.getElementById('copy-btn');
+  const downloadBtn = document.getElementById('download-btn');
 
-  const spriteKfTabs = document.querySelectorAll('#spriteKfTabs button');
-  const scaleSlider = document.getElementById('scaleSlider');
-  const scaleValue = document.getElementById('scaleValue');
-  const rotationSlider = document.getElementById('rotationSlider');
-  const rotationValue = document.getElementById('rotationValue');
+  const recordWarn = document.getElementById('record-warn');
+  const recordBtn = document.getElementById('record-btn');
+  const recordTimer = document.getElementById('record-timer');
+  const discardBtn = document.getElementById('discard-btn');
+  const recordStatus = document.getElementById('record-status');
+  const recordedAudioEl = document.getElementById('recorded-audio');
+  const whisperModelSelect = document.getElementById('whisper-model-select');
+  const transcribeBtn = document.getElementById('transcribe-btn');
+  const whisperProgressTrack = document.getElementById('whisper-progress-track');
+  const whisperProgressFill = document.getElementById('whisper-progress-fill');
+  const whisperStatus = document.getElementById('whisper-status');
 
-  const durationInput = document.getElementById('duration');
-  const fpsSelect = document.getElementById('fps');
-  const easingSelect = document.getElementById('easing');
-  const playModeSelect = document.getElementById('playMode');
-  const outputPreset = document.getElementById('outputPreset');
-  const playBtn = document.getElementById('playBtn');
-  const exportBtn = document.getElementById('exportBtn');
-  const exportStatus = document.getElementById('exportStatus');
-  const previewWrap = document.getElementById('previewWrap');
-  const canvas = document.getElementById('previewCanvas');
-  const ctx = canvas.getContext('2d');
-
-  // ---------- State ----------
-  let layers = [];          // { id, name, type: 'background'|'sprite', img, naturalW, naturalH, opacity, keyframes:{start,end} }
-  let layerCounter = 0;
-  let bgCount = 0, spriteCount = 0;
-  let activeLayerId = null;
-  let activeKf = 'start';
-  let dragging = null;      // { mode: 'crosshair'|'sprite', kf } or null
-  let playing = false;
-  let recording = false;
-  const spriteBoxEls = { start: null, end: null };
-
-  function activeLayer() { return layers.find(l => l.id === activeLayerId) || null; }
-  function clamp01(v) { return Math.min(1, Math.max(0, v)); }
-  function lerp(a, b, t) { return a + (b - a) * t; }
-
-  // ---------- Adding layers ----------
-  function wireDropzone(zone, input, type) {
-    zone.addEventListener('click', () => input.click());
-    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-    zone.addEventListener('drop', e => {
-      e.preventDefault();
-      zone.classList.remove('drag');
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) addLayerFromFile(e.dataTransfer.files[0], type);
-    });
-    input.addEventListener('change', () => {
-      if (input.files && input.files[0]) addLayerFromFile(input.files[0], type);
-      input.value = '';
-    });
-  }
-  wireDropzone(dropzoneBg, fileInputBg, 'background');
-  wireDropzone(dropzoneSprite, fileInputSprite, 'sprite');
-
-  function addLayerFromFile(file, type) {
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const image = new Image();
-      image.onload = () => {
-        const isBg = type === 'background';
-        const layer = {
-          id: 'L' + (++layerCounter),
-          name: isBg ? ('背景' + (++bgCount)) : ('キャラクター' + (++spriteCount)),
-          type,
-          img: image,
-          naturalW: image.naturalWidth,
-          naturalH: image.naturalHeight,
-          opacity: 1,
-          keyframes: isBg
-            ? { start: { zoom: 1.0, cx: 0.5, cy: 0.5 }, end: { zoom: 1.6, cx: 0.5, cy: 0.5 } }
-            : { start: { x: 0.5, y: 0.5, scale: 1.0, rotation: 0 }, end: { x: 0.5, y: 0.5, scale: 1.0, rotation: 0 } },
-          wobble: isBg ? { enabled: false, amount: 0.3 } : null
-        };
-        const wasEmpty = layers.length === 0;
-        layers.push(layer);
-        selectLayer(layer.id);
-        if (wasEmpty) setupOutputSize();
-        renderLayerList();
-        playBtn.disabled = false;
-        exportBtn.disabled = false;
-        redrawActiveFrame();
-      };
-      image.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+  function setStatus(el, text, kind) {
+    el.textContent = text;
+    el.className = 'status' + (kind ? ' ' + kind : '');
   }
 
-  // ---------- Layer list UI ----------
-  function renderLayerList() {
-    layerListEl.innerHTML = '';
-    emptyHint.style.display = layers.length ? 'none' : '';
-    layers.forEach((layer, idx) => {
-      const row = document.createElement('div');
-      row.className = 'layer-row' + (layer.id === activeLayerId ? ' active' : '');
-      row.innerHTML = `
-        <img class="thumb" src="${layer.img.src}">
-        <div class="layer-info">
-          <div class="layer-name">${layer.name}</div>
-          <span class="badge ${layer.type === 'background' ? 'bg' : 'sprite'}">${layer.type === 'background' ? '背景' : '前景'}</span>
-        </div>
-        <input type="range" class="layer-opacity" min="0" max="1" step="0.05" value="${layer.opacity}" title="不透明度">
-        <div class="layer-btns">
-          <button class="icon-btn" data-act="up" title="奥へ">↑</button>
-          <button class="icon-btn" data-act="down" title="手前へ">↓</button>
-          <button class="icon-btn" data-act="del" title="削除">✕</button>
-        </div>
-      `;
-      row.addEventListener('click', ev => {
-        if (ev.target.closest('.icon-btn') || ev.target.classList.contains('layer-opacity')) return;
-        selectLayer(layer.id);
+  // --- WebGPU対応チェック（要約AI用） ---
+  if (!('gpu' in navigator)) {
+    webgpuWarn.classList.add('visible');
+    generateBtn.disabled = true;
+    loadModelBtn.disabled = true;
+    modelSelect.disabled = true;
+  }
+
+  // --- 録音対応チェック ---
+  const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  if (!canRecord) {
+    recordWarn.classList.add('visible');
+    recordBtn.disabled = true;
+  }
+
+  // --- ごく簡易なMarkdown → HTML変換（表示用。外部ライブラリ不使用） ---
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderMarkdown(md) {
+    const lines = md.split('\n');
+    let html = '';
+    let inList = null; // 'ul' | 'ol'
+    let inTable = false;
+    let tableRows = [];
+
+    function closeList() {
+      if (inList) { html += `</${inList}>`; inList = null; }
+    }
+    function inlineFormat(text) {
+      text = escapeHtml(text);
+      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+      return text;
+    }
+    function flushTable() {
+      if (!tableRows.length) return;
+      html += '<table>';
+      tableRows.forEach((cells, i) => {
+        const tag = i === 0 ? 'th' : 'td';
+        html += '<tr>' + cells.map(c => `<${tag}>${inlineFormat(c.trim())}</${tag}>`).join('') + '</tr>';
       });
-      row.querySelector('.layer-opacity').addEventListener('input', ev => {
-        layer.opacity = parseFloat(ev.target.value);
-        redrawActiveFrame();
-      });
-      row.querySelector('[data-act="up"]').addEventListener('click', () => moveLayer(idx, -1));
-      row.querySelector('[data-act="down"]').addEventListener('click', () => moveLayer(idx, 1));
-      row.querySelector('[data-act="del"]').addEventListener('click', () => deleteLayer(layer.id));
-      layerListEl.appendChild(row);
-    });
-  }
-
-  function moveLayer(idx, dir) {
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= layers.length) return;
-    const tmp = layers[idx];
-    layers[idx] = layers[newIdx];
-    layers[newIdx] = tmp;
-    renderLayerList();
-    redrawActiveFrame();
-  }
-
-  function deleteLayer(id) {
-    layers = layers.filter(l => l.id !== id);
-    if (activeLayerId === id) {
-      activeLayerId = layers.length ? layers[layers.length - 1].id : null;
+      html += '</table>';
+      tableRows = [];
+      inTable = false;
     }
-    renderLayerList();
-    selectLayer(activeLayerId);
-    if (!layers.length) {
-      playBtn.disabled = true;
-      exportBtn.disabled = true;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-  }
 
-  function selectLayer(id) {
-    activeLayerId = id;
-    renderLayerList();
-    const layer = activeLayer();
-    editorCardBg.style.display = 'none';
-    editorCardSprite.style.display = 'none';
-    if (!layer) { updateSpriteBoxesVisibility(); return; }
-    if (layer.type === 'background') {
-      editorCardBg.style.display = '';
-      bgLayerName.textContent = layer.name;
-      sourceImage.src = layer.img.src;
-      zoomSlider.value = layer.keyframes[activeKf].zoom;
-      updateZoomLabel();
-      wobbleToggle.checked = layer.wobble.enabled;
-      wobbleAmount.value = Math.round(layer.wobble.amount * 100);
-      wobbleAmount.disabled = !layer.wobble.enabled;
-      updateWobbleLabel();
-      requestAnimationFrame(renderCropOverlays);
-    } else {
-      editorCardSprite.style.display = '';
-      spriteLayerName.textContent = layer.name;
-      scaleSlider.value = layer.keyframes[activeKf].scale;
-      rotationSlider.value = layer.keyframes[activeKf].rotation;
-      updateScaleLabel();
-      updateRotationLabel();
-    }
-    updateSpriteBoxesVisibility();
-    redrawActiveFrame();
-  }
+    for (let raw of lines) {
+      const trimmed = raw.trim();
 
-  // ---------- Keyframe tab switching (shared active tab across layers) ----------
-  function setActiveKf(kf) {
-    activeKf = kf;
-    bgKfTabs.forEach(b => b.classList.toggle('active', b.dataset.kf === kf));
-    spriteKfTabs.forEach(b => b.classList.toggle('active', b.dataset.kf === kf));
-    const layer = activeLayer();
-    if (layer && layer.type === 'background') {
-      zoomSlider.value = layer.keyframes[kf].zoom;
-      updateZoomLabel();
-      renderCropOverlays();
-    } else if (layer && layer.type === 'sprite') {
-      scaleSlider.value = layer.keyframes[kf].scale;
-      rotationSlider.value = layer.keyframes[kf].rotation;
-      updateScaleLabel();
-      updateRotationLabel();
-    }
-    updateSpriteBoxesVisibility();
-    redrawActiveFrame();
-  }
-  bgKfTabs.forEach(btn => btn.addEventListener('click', () => setActiveKf(btn.dataset.kf)));
-  spriteKfTabs.forEach(btn => btn.addEventListener('click', () => setActiveKf(btn.dataset.kf)));
-
-  // ---------- Background (crop) editor ----------
-  zoomSlider.addEventListener('input', () => {
-    const layer = activeLayer();
-    if (!layer) return;
-    layer.keyframes[activeKf].zoom = parseFloat(zoomSlider.value);
-    updateZoomLabel();
-    renderCropOverlays();
-    redrawActiveFrame();
-  });
-  function updateZoomLabel() { zoomValue.textContent = parseFloat(zoomSlider.value).toFixed(2) + 'x'; }
-
-  wobbleToggle.addEventListener('change', () => {
-    const layer = activeLayer();
-    if (!layer || !layer.wobble) return;
-    layer.wobble.enabled = wobbleToggle.checked;
-    wobbleAmount.disabled = !layer.wobble.enabled;
-  });
-  wobbleAmount.addEventListener('input', () => {
-    const layer = activeLayer();
-    if (!layer || !layer.wobble) return;
-    layer.wobble.amount = parseFloat(wobbleAmount.value) / 100;
-    updateWobbleLabel();
-  });
-  function updateWobbleLabel() { wobbleValue.textContent = wobbleAmount.value + '%'; }
-
-  ['start', 'end'].forEach(kf => {
-    crossEls[kf].addEventListener('pointerdown', e => {
-      const layer = activeLayer();
-      if (!layer || layer.type !== 'background') return;
-      dragging = { mode: 'crosshair', kf };
-      setActiveKf(kf);
-      e.preventDefault();
-    });
-  });
-
-  function getRect(kf, natW, natH) {
-    const { w: outW, h: outH } = getOutputSize();
-    const outputAspect = outW / outH;
-    let rectW = natW / kf.zoom;
-    let rectH = rectW / outputAspect;
-    if (rectH > natH) { rectH = natH; rectW = rectH * outputAspect; }
-    if (rectW > natW) { rectW = natW; rectH = rectW / outputAspect; }
-    const cx = kf.cx * natW;
-    const cy = kf.cy * natH;
-    let x = cx - rectW / 2;
-    let y = cy - rectH / 2;
-    x = Math.min(Math.max(x, 0), natW - rectW);
-    y = Math.min(Math.max(y, 0), natH - rectH);
-    return { x, y, w: rectW, h: rectH };
-  }
-  function lerpRect(a, b, t) {
-    return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t), w: lerp(a.w, b.w, t), h: lerp(a.h, b.h, t) };
-  }
-
-  function renderCropOverlays() {
-    const layer = activeLayer();
-    if (!layer || layer.type !== 'background' || !layer.naturalW) return;
-    const imgRect = sourceImage.getBoundingClientRect();
-    const stageRect = stage.getBoundingClientRect();
-    if (imgRect.width === 0) return;
-    const offsetX = imgRect.left - stageRect.left;
-    const offsetY = imgRect.top - stageRect.top;
-    const scale = imgRect.width / layer.naturalW;
-
-    ['start', 'end'].forEach(kf => {
-      const r = getRect(layer.keyframes[kf], layer.naturalW, layer.naturalH);
-      const el = rectEls[kf];
-      el.style.left = (offsetX + r.x * scale) + 'px';
-      el.style.top = (offsetY + r.y * scale) + 'px';
-      el.style.width = (r.w * scale) + 'px';
-      el.style.height = (r.h * scale) + 'px';
-
-      const c = crossEls[kf];
-      c.style.left = (offsetX + layer.keyframes[kf].cx * layer.naturalW * scale) + 'px';
-      c.style.top = (offsetY + layer.keyframes[kf].cy * layer.naturalH * scale) + 'px';
-      c.classList.toggle('dim', kf !== activeKf);
-    });
-  }
-  window.addEventListener('resize', () => { renderCropOverlays(); positionSpriteBoxes(); });
-
-  // ---------- Sprite (position/scale/rotation) editor ----------
-  scaleSlider.addEventListener('input', () => {
-    const layer = activeLayer();
-    if (!layer) return;
-    layer.keyframes[activeKf].scale = parseFloat(scaleSlider.value);
-    updateScaleLabel();
-    positionSpriteBoxes();
-    redrawActiveFrame();
-  });
-  rotationSlider.addEventListener('input', () => {
-    const layer = activeLayer();
-    if (!layer) return;
-    layer.keyframes[activeKf].rotation = parseFloat(rotationSlider.value);
-    updateRotationLabel();
-    positionSpriteBoxes();
-    redrawActiveFrame();
-  });
-  function updateScaleLabel() { scaleValue.textContent = parseFloat(scaleSlider.value).toFixed(2) + 'x'; }
-  function updateRotationLabel() { rotationValue.textContent = Math.round(parseFloat(rotationSlider.value)) + '°'; }
-
-  function ensureSpriteBoxEls() {
-    ['start', 'end'].forEach(kf => {
-      if (spriteBoxEls[kf]) return;
-      const el = document.createElement('div');
-      el.className = 'sprite-box ' + kf;
-      el.style.display = 'none';
-      previewWrap.appendChild(el);
-      spriteBoxEls[kf] = el;
-      el.addEventListener('pointerdown', e => {
-        const layer = activeLayer();
-        if (!layer || layer.type !== 'sprite' || kf !== activeKf) return;
-        const canvasRect = canvas.getBoundingClientRect();
-        const nx = (e.clientX - canvasRect.left) / canvasRect.width;
-        const ny = (e.clientY - canvasRect.top) / canvasRect.height;
-        dragging = {
-          mode: 'sprite', kf,
-          grabDX: nx - layer.keyframes[kf].x,
-          grabDY: ny - layer.keyframes[kf].y
-        };
-        e.preventDefault();
-      });
-    });
-  }
-  ensureSpriteBoxEls();
-
-  function updateSpriteBoxesVisibility() {
-    const layer = activeLayer();
-    const show = layer && layer.type === 'sprite';
-    ['start', 'end'].forEach(kf => {
-      const el = spriteBoxEls[kf];
-      el.style.display = show ? '' : 'none';
-      el.classList.toggle('active', kf === activeKf);
-      el.classList.toggle('inactive', kf !== activeKf);
-    });
-    if (show) positionSpriteBoxes();
-  }
-
-  function positionSpriteBoxes() {
-    const layer = activeLayer();
-    if (!layer || layer.type !== 'sprite') return;
-    const canvasRect = canvas.getBoundingClientRect();
-    const wrapRect = previewWrap.getBoundingClientRect();
-    if (canvasRect.width === 0) return;
-    const scaleX = canvasRect.width / canvas.width;
-    const scaleY = canvasRect.height / canvas.height;
-    ['start', 'end'].forEach(kf => {
-      const k = layer.keyframes[kf];
-      const w = layer.naturalW * k.scale * scaleX;
-      const h = layer.naturalH * k.scale * scaleY;
-      const cxPx = k.x * canvas.width * scaleX + (canvasRect.left - wrapRect.left);
-      const cyPx = k.y * canvas.height * scaleY + (canvasRect.top - wrapRect.top);
-      const el = spriteBoxEls[kf];
-      el.style.left = (cxPx - w / 2) + 'px';
-      el.style.top = (cyPx - h / 2) + 'px';
-      el.style.width = w + 'px';
-      el.style.height = h + 'px';
-      el.style.transform = 'rotate(' + k.rotation + 'deg)';
-    });
-  }
-
-  window.addEventListener('pointermove', e => {
-    if (!dragging) return;
-    if (dragging.mode === 'crosshair') {
-      const layer = activeLayer();
-      if (!layer) return;
-      const imgRect = sourceImage.getBoundingClientRect();
-      if (imgRect.width === 0) return;
-      let x = clamp01((e.clientX - imgRect.left) / imgRect.width);
-      let y = clamp01((e.clientY - imgRect.top) / imgRect.height);
-      layer.keyframes[dragging.kf].cx = x;
-      layer.keyframes[dragging.kf].cy = y;
-      renderCropOverlays();
-      redrawActiveFrame();
-    } else if (dragging.mode === 'sprite') {
-      const layer = activeLayer();
-      if (!layer) return;
-      const canvasRect = canvas.getBoundingClientRect();
-      if (canvasRect.width === 0) return;
-      const nx = (e.clientX - canvasRect.left) / canvasRect.width;
-      const ny = (e.clientY - canvasRect.top) / canvasRect.height;
-      layer.keyframes[dragging.kf].x = nx - dragging.grabDX;
-      layer.keyframes[dragging.kf].y = ny - dragging.grabDY;
-      positionSpriteBoxes();
-      redrawActiveFrame();
-    }
-  });
-  window.addEventListener('pointerup', () => { dragging = null; });
-
-  // ---------- Output size ----------
-  function getOutputSize() {
-    const val = outputPreset.value;
-    if (val === 'auto') {
-      const base = layers.find(l => l.type === 'background') || layers[0];
-      let w = base ? base.naturalW : 1280;
-      let h = base ? base.naturalH : 720;
-      const maxDim = 1280;
-      if (w > maxDim || h > maxDim) {
-        const scale = maxDim / Math.max(w, h);
-        w = Math.round(w * scale);
-        h = Math.round(h * scale);
+      if (/^\|.*\|$/.test(trimmed)) {
+        if (/^\|[\s:-]+\|$/.test(trimmed)) continue; // 区切り行はスキップ
+        inTable = true;
+        const cells = trimmed.slice(1, -1).split('|');
+        tableRows.push(cells);
+        continue;
+      } else if (inTable) {
+        flushTable();
       }
-      return { w, h };
-    }
-    const [w, h] = val.split('x').map(Number);
-    return { w, h };
-  }
-  function setupOutputSize() {
-    const { w, h } = getOutputSize();
-    canvas.width = w;
-    canvas.height = h;
-  }
-  outputPreset.addEventListener('change', () => {
-    setupOutputSize();
-    redrawActiveFrame();
-    requestAnimationFrame(() => { renderCropOverlays(); positionSpriteBoxes(); });
-  });
 
-  // ---------- Easing ----------
-  const easings = {
-    linear: t => t,
-    easeInOut: t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
-    easeIn: t => t * t,
-    easeOut: t => 1 - (1 - t) * (1 - t)
-  };
+      if (trimmed === '') { closeList(); continue; }
 
-  // ---------- Compositing / drawing ----------
-  function drawLayerAtEased(layer, eased, elapsedSec) {
-    ctx.save();
-    ctx.globalAlpha = layer.opacity;
-    if (layer.type === 'background') {
-      const startRect = getRect(layer.keyframes.start, layer.naturalW, layer.naturalH);
-      const endRect = getRect(layer.keyframes.end, layer.naturalW, layer.naturalH);
-      let r = lerpRect(startRect, endRect, eased);
-      if (layer.wobble && layer.wobble.enabled && layer.wobble.amount > 0) {
-        const amt = layer.wobble.amount;
-        const cx = r.x + r.w / 2 + Math.sin(elapsedSec * 0.9) * 0.02 * amt * r.w;
-        const cy = r.y + r.h / 2 + Math.cos(elapsedSec * 1.3) * 0.015 * amt * r.h;
-        const breathe = 1 + 0.01 * amt * Math.sin(elapsedSec * 0.5);
-        const w = r.w * breathe, h = r.h * breathe;
-        let x = cx - w / 2, y = cy - h / 2;
-        x = Math.min(Math.max(x, 0), Math.max(0, layer.naturalW - w));
-        y = Math.min(Math.max(y, 0), Math.max(0, layer.naturalH - h));
-        r = { x, y, w: Math.min(w, layer.naturalW), h: Math.min(h, layer.naturalH) };
-      }
-      ctx.drawImage(layer.img, r.x, r.y, r.w, r.h, 0, 0, canvas.width, canvas.height);
-    } else {
-      const s = layer.keyframes.start, e = layer.keyframes.end;
-      const x = lerp(s.x, e.x, eased) * canvas.width;
-      const y = lerp(s.y, e.y, eased) * canvas.height;
-      const scale = lerp(s.scale, e.scale, eased);
-      const rotation = lerp(s.rotation, e.rotation, eased);
-      const w = layer.naturalW * scale, h = layer.naturalH * scale;
-      ctx.translate(x, y);
-      ctx.rotate(rotation * Math.PI / 180);
-      ctx.drawImage(layer.img, -w / 2, -h / 2, w, h);
-    }
-    ctx.restore();
-  }
-
-  function drawCompositeAtT(rawT, mode, elapsedSec) {
-    let t = rawT;
-    if (mode === 'pingpong') t = rawT < 0.5 ? rawT * 2 : (1 - rawT) * 2;
-    const eased = easings[easingSelect.value](clamp01(t));
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    layers.forEach(layer => drawLayerAtEased(layer, eased, elapsedSec || 0));
-  }
-
-  function redrawActiveFrame() {
-    if (playing || recording) return;
-    drawCompositeAtT(activeKf === 'start' ? 0 : 1, 'once', performance.now() / 1000);
-  }
-
-  // Idle loop: keeps the "wobble" preview alive on the edit canvas while not playing/recording.
-  function idleTick(now) {
-    if (!playing && !recording && layers.length) {
-      drawCompositeAtT(activeKf === 'start' ? 0 : 1, 'once', now / 1000);
-    }
-    requestAnimationFrame(idleTick);
-  }
-  requestAnimationFrame(idleTick);
-
-  // ---------- Preview playback ----------
-  playBtn.addEventListener('click', () => { if (!playing) playPreview(); });
-  function playPreview() {
-    playing = true;
-    playBtn.disabled = true;
-    exportBtn.disabled = true;
-    const duration = parseFloat(durationInput.value) * 1000;
-    const mode = playModeSelect.value;
-    const start = performance.now();
-    function step(now) {
-      const elapsed = now - start;
-      const rawT = Math.min(1, elapsed / duration);
-      drawCompositeAtT(rawT, mode, now / 1000);
-      if (rawT < 1) {
-        requestAnimationFrame(step);
+      let m;
+      if ((m = trimmed.match(/^(#{1,3})\s+(.*)$/))) {
+        closeList();
+        const level = m[1].length;
+        html += `<h${level}>${inlineFormat(m[2])}</h${level}>`;
+      } else if ((m = trimmed.match(/^[-*]\s+(.*)$/))) {
+        if (inList !== 'ul') { closeList(); html += '<ul>'; inList = 'ul'; }
+        html += `<li>${inlineFormat(m[1])}</li>`;
+      } else if ((m = trimmed.match(/^\d+\.\s+(.*)$/))) {
+        if (inList !== 'ol') { closeList(); html += '<ol>'; inList = 'ol'; }
+        html += `<li>${inlineFormat(m[1])}</li>`;
       } else {
-        playing = false;
-        playBtn.disabled = false;
-        exportBtn.disabled = false;
-        redrawActiveFrame();
+        closeList();
+        html += `<p>${inlineFormat(trimmed)}</p>`;
       }
     }
-    requestAnimationFrame(step);
+    closeList();
+    flushTable();
+    return html;
   }
 
-  // ---------- Export (WebM via MediaRecorder) ----------
-  exportBtn.addEventListener('click', () => { if (!recording) startExport(); });
+  // --- タブ切り替え ---
+  tabRendered.addEventListener('click', () => {
+    tabRendered.classList.add('active');
+    tabRaw.classList.remove('active');
+    renderedView.style.display = '';
+    rawView.style.display = 'none';
+  });
+  tabRaw.addEventListener('click', () => {
+    tabRaw.classList.add('active');
+    tabRendered.classList.remove('active');
+    rawView.style.display = '';
+    renderedView.style.display = 'none';
+  });
 
-  function pickMimeType() {
-    const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
-    for (const c of candidates) {
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(rawView.value);
+      const orig = copyBtn.textContent;
+      copyBtn.textContent = 'コピーしました';
+      setTimeout(() => { copyBtn.textContent = orig; }, 1500);
+    } catch (e) {
+      alert('コピーに失敗しました: ' + e.message);
     }
-    return '';
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const blob = new Blob([rawView.value], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const titleSlug = (titleInput.value.trim() || '議事録').replace(/[\\/:*?"<>|]/g, '_');
+    const dateSlug = dateInput.value || new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `${dateSlug}_${titleSlug}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  function buildPrompt() {
+    const title = titleInput.value.trim();
+    const date = dateInput.value;
+    const participants = participantsInput.value.trim();
+    const transcript = transcriptInput.value.trim();
+
+    const metaLines = [];
+    if (title) metaLines.push(`会議名: ${title}`);
+    if (date) metaLines.push(`日時: ${date}`);
+    if (participants) metaLines.push(`参加者（ユーザー指定）: ${participants}`);
+    const meta = metaLines.length ? metaLines.join('\n') + '\n\n' : '';
+
+    return `以下はミーティングの文字起こし（またはメモ）です。これをもとに、日本語で議事録を作成し、末尾に要約を付けてください。
+出力はMarkdown形式で、次の構成にしてください（情報がない項目は「情報なし」と書いてください）。
+
+# 議事録
+
+- 日時:
+- 参加者:
+
+## 議題
+
+## 主な議論内容
+
+## 決定事項
+
+## アクションアイテム
+| 担当者 | タスク | 期限 |
+|---|---|---|
+
+## 要約
+(3〜5行で要点をまとめる)
+
+${meta}文字起こし:
+"""
+${transcript}
+"""`;
   }
 
-  function startExport() {
-    if (!window.MediaRecorder || !canvas.captureStream) {
-      exportStatus.textContent = 'このブラウザは動画書き出し（MediaRecorder）に対応していません。';
+  // ============================================================
+  // 要約AI（WebLLM）
+  // ============================================================
+  let webllm = null;
+  let engine = null;
+  let loadedModelId = null;
+
+  async function loadWebLLM() {
+    if (webllm) return webllm;
+    setStatus(modelStatus, 'ライブラリを読み込み中…', 'loading');
+    webllm = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/+esm');
+    return webllm;
+  }
+
+  function pickDefaultModel(list) {
+    const priority = [
+      'Qwen2.5-3B-Instruct',
+      'Qwen2.5-1.5B-Instruct',
+      'Llama-3.2-3B-Instruct',
+      'Llama-3.2-1B-Instruct',
+      'Qwen2.5-0.5B-Instruct'
+    ];
+    for (const name of priority) {
+      const found = list.find(m => m.model_id.includes(name));
+      if (found) return found.model_id;
+    }
+    return list.length ? list[0].model_id : null;
+  }
+
+  async function populateModelList() {
+    try {
+      const lib = await loadWebLLM();
+      const all = lib.prebuiltAppConfig.model_list || [];
+      let modelList = all.filter(m => {
+        const id = m.model_id || '';
+        if (!/instruct/i.test(id)) return false;
+        if (/vision|embed/i.test(id)) return false;
+        if (typeof m.vram_required_MB === 'number' && m.vram_required_MB > 4500) return false;
+        return true;
+      }).sort((a, b) => (a.vram_required_MB || 0) - (b.vram_required_MB || 0));
+
+      if (!modelList.length) modelList = all;
+
+      modelSelect.innerHTML = '';
+      modelList.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.model_id;
+        const size = m.vram_required_MB ? `（目安VRAM: ${Math.round(m.vram_required_MB)}MB）` : '';
+        opt.textContent = m.model_id + size;
+        modelSelect.appendChild(opt);
+      });
+
+      const defaultId = pickDefaultModel(modelList);
+      if (defaultId) modelSelect.value = defaultId;
+
+      setStatus(modelStatus, 'モデル一覧を取得しました。「モデルを読み込む」を押してください。', '');
+    } catch (e) {
+      console.error(e);
+      setStatus(modelStatus, 'モデル一覧の取得に失敗しました: ' + e.message, 'error');
+    }
+  }
+
+  async function ensureEngineLoaded() {
+    const selectedId = modelSelect.value;
+    if (engine && loadedModelId === selectedId) return engine;
+
+    const lib = await loadWebLLM();
+    loadModelBtn.disabled = true;
+    modelSelect.disabled = true;
+    progressTrack.classList.add('visible');
+    progressFill.style.width = '0%';
+    modelBadge.textContent = '読み込み中…';
+    modelBadge.classList.remove('ready');
+
+    try {
+      engine = await lib.CreateMLCEngine(selectedId, {
+        initProgressCallback: (report) => {
+          const pct = Math.round((report.progress || 0) * 100);
+          progressFill.style.width = pct + '%';
+          setStatus(modelStatus, report.text || `読み込み中… ${pct}%`, 'loading');
+        }
+      });
+      loadedModelId = selectedId;
+      modelBadge.textContent = '読み込み済み: ' + selectedId;
+      modelBadge.classList.add('ready');
+      setStatus(modelStatus, 'モデルの準備ができました。', 'success');
+      return engine;
+    } catch (e) {
+      engine = null;
+      loadedModelId = null;
+      modelBadge.textContent = '未読み込み';
+      modelBadge.classList.remove('ready');
+      throw e;
+    } finally {
+      loadModelBtn.disabled = false;
+      modelSelect.disabled = false;
+      progressTrack.classList.remove('visible');
+    }
+  }
+
+  loadModelBtn.addEventListener('click', async () => {
+    try {
+      await ensureEngineLoaded();
+    } catch (e) {
+      console.error(e);
+      setStatus(modelStatus, 'モデルの読み込みに失敗しました: ' + e.message, 'error');
+    }
+  });
+
+  async function generateMinutes() {
+    const transcript = transcriptInput.value.trim();
+    if (!transcript) {
+      setStatus(statusEl, '文字起こしを入力してください。', 'error');
       return;
     }
-    const mimeType = pickMimeType();
-    if (!mimeType) {
-      exportStatus.textContent = 'このブラウザは対応するWebMコーデックがありません。';
-      return;
-    }
-    const fps = parseInt(fpsSelect.value, 10);
-    const mode = playModeSelect.value;
-    const singleDuration = parseFloat(durationInput.value) * 1000;
-    const totalDuration = mode === 'pingpong' ? singleDuration * 2 : singleDuration;
 
-    recording = true;
-    playBtn.disabled = true;
-    exportBtn.disabled = true;
-    exportBtn.textContent = '書き出し中...';
+    generateBtn.disabled = true;
+    outputWrap.classList.remove('visible');
 
-    const stream = canvas.captureStream(fps);
-    const recorder = new MediaRecorder(stream, { mimeType });
-    const chunks = [];
-    recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'motion-' + Date.now() + '.webm';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    try {
+      setStatus(statusEl, 'AIモデルを準備しています…', 'loading');
+      const eng = await ensureEngineLoaded();
 
-      recording = false;
-      playBtn.disabled = false;
-      exportBtn.disabled = false;
-      exportBtn.textContent = 'WebM動画として書き出す';
-      exportStatus.textContent = '書き出し完了！ダウンロードを確認してください。';
-      redrawActiveFrame();
-    };
+      statusEl.innerHTML = '<span class="spinner"></span>議事録を生成中…（ローカル実行のため数十秒〜数分かかる場合があります）';
+      statusEl.className = 'status loading';
 
-    recorder.start();
-    const start = performance.now();
-    function step(now) {
-      const elapsed = now - start;
-      const rawT = Math.min(1, elapsed / totalDuration);
-      drawCompositeAtT(rawT, mode, now / 1000);
-      const remaining = Math.max(0, (totalDuration - elapsed) / 1000);
-      exportStatus.textContent = '書き出し中... 残り約' + remaining.toFixed(1) + '秒';
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(step);
-      } else {
-        recorder.stop();
+      const messages = [
+        { role: 'user', content: buildPrompt() }
+      ];
+
+      let fullText = '';
+      const stream = await eng.chat.completions.create({
+        messages,
+        temperature: 0.3,
+        max_tokens: 2048,
+        stream: true
+      });
+
+      outputWrap.classList.add('visible');
+      for await (const chunk of stream) {
+        const delta = chunk.choices?.[0]?.delta?.content || '';
+        if (delta) {
+          fullText += delta;
+          rawView.value = fullText;
+          renderedView.innerHTML = renderMarkdown(fullText);
+        }
       }
+
+      if (!fullText.trim()) {
+        throw new Error('モデルから応答を取得できませんでした。文字起こしを短くして再度お試しください。');
+      }
+
+      setStatus(statusEl, '議事録を生成しました。', 'success');
+      outputWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      console.error(err);
+      setStatus(statusEl, 'エラー: ' + err.message, 'error');
+    } finally {
+      generateBtn.disabled = false;
     }
-    requestAnimationFrame(step);
   }
 
-  const ro = new ResizeObserver(() => { renderCropOverlays(); positionSpriteBoxes(); });
-  ro.observe(stage);
-  ro.observe(previewWrap);
-})();
+  generateBtn.addEventListener('click', generateMinutes);
+
+  if ('gpu' in navigator) {
+    populateModelList();
+  }
+
+  // ============================================================
+  // 録音（マイク＋システム音声）
+  // ============================================================
+  let micStream = null;
+  let displayStream = null;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recAudioCtx = null;
+  let recordingStartTime = 0;
+  let timerInterval = null;
+  let audioBlob = null;
+
+  function formatTime(ms) {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
+    const s = String(totalSec % 60).padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  function updateTimer() {
+    recordTimer.textContent = formatTime(Date.now() - recordingStartTime);
+  }
+
+  function stopAllTracks(stream) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+  }
+
+  async function startRecording() {
+    recordBtn.disabled = true;
+    setStatus(recordStatus, 'マイクの許可を確認しています…', 'loading');
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      setStatus(recordStatus, 'マイクへのアクセスが許可されませんでした: ' + e.message, 'error');
+      recordBtn.disabled = false;
+      return;
+    }
+
+    displayStream = null;
+    if (navigator.mediaDevices.getDisplayMedia) {
+      try {
+        setStatus(recordStatus, '画面共有（システム音声）の選択を待っています…', 'loading');
+        displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      } catch (e) {
+        displayStream = null; // キャンセル・非対応時はマイクのみで続行
+      }
+    }
+
+    const hasSystemAudio = !!(displayStream && displayStream.getAudioTracks().length);
+
+    recAudioCtx = new AudioContext();
+    const dest = recAudioCtx.createMediaStreamDestination();
+    recAudioCtx.createMediaStreamSource(micStream).connect(dest);
+    if (hasSystemAudio) {
+      recAudioCtx.createMediaStreamSource(new MediaStream(displayStream.getAudioTracks())).connect(dest);
+    }
+
+    const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
+      ? 'audio/webm;codecs=opus' : '';
+    mediaRecorder = mimeType ? new MediaRecorder(dest.stream, { mimeType }) : new MediaRecorder(dest.stream);
+    recordedChunks = [];
+    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = onRecordingStopped;
+    mediaRecorder.start();
+
+    recordingStartTime = Date.now();
+    recordTimer.textContent = '00:00';
+    timerInterval = setInterval(updateTimer, 500);
+
+    recordBtn.textContent = '録音停止';
+    recordBtn.disabled = false;
+    discardBtn.disabled = true;
+    transcribeBtn.disabled = true;
+    recordedAudioEl.style.display = 'none';
+
+    if (displayStream && !hasSystemAudio) {
+      setStatus(recordStatus, 'システム音声を取得できませんでした。マイクのみで録音しています。', '');
+    } else if (hasSystemAudio) {
+      setStatus(recordStatus, 'マイク＋システム音声を録音中…', 'loading');
+    } else {
+      setStatus(recordStatus, 'マイクのみで録音中…（画面共有はキャンセルされました）', '');
+    }
+  }
+
+  function stopRecording() {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+    mediaRecorder.stop();
+    clearInterval(timerInterval);
+    recordBtn.textContent = '録音開始';
+  }
+
+  function onRecordingStopped() {
+    const mimeType = mediaRecorder.mimeType || 'audio/webm';
+    audioBlob = recordedChunks.length ? new Blob(recordedChunks, { type: mimeType }) : null;
+
+    stopAllTracks(micStream);
+    stopAllTracks(displayStream);
+    micStream = null;
+    displayStream = null;
+    if (recAudioCtx) { recAudioCtx.close(); recAudioCtx = null; }
+
+    if (audioBlob) {
+      recordedAudioEl.src = URL.createObjectURL(audioBlob);
+      recordedAudioEl.style.display = '';
+      transcribeBtn.disabled = false;
+      discardBtn.disabled = false;
+      setStatus(recordStatus, `録音が完了しました（${formatTime(Date.now() - recordingStartTime)}）。「文字起こしを実行」を押してください。`, 'success');
+    } else {
+      setStatus(recordStatus, '録音データを取得できませんでした。', 'error');
+    }
+  }
+
+  function discardRecording() {
+    audioBlob = null;
+    recordedChunks = [];
+    recordedAudioEl.removeAttribute('src');
+    recordedAudioEl.style.display = 'none';
+    transcribeBtn.disabled = true;
+    discardBtn.disabled = true;
+    recordTimer.textContent = '00:00';
+    setStatus(recordStatus, '録音を破棄しました。', '');
+  }
+
+  recordBtn.addEventListener('click', () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  });
+  discardBtn.addEventListener('click', discardRecording);
+
+  // ============================================================
+  // 文字起こし（transformers.js / Whisper・完全ローカル）
+  // ============================================================
+  let transformersLib = null;
+  let whisperPipeline = null;
+  let loadedWhisperModel = null;
+
+  async function loadTransformers() {
+    if (transformersLib) return transformersLib;
+    setStatus(whisperStatus, '文字起こしライブラリを読み込み中…', 'loading');
+    transformersLib = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/+esm');
+    transformersLib.env.allowLocalModels = false;
+    return transformersLib;
+  }
+
+  async function ensureWhisperLoaded() {
+    const modelId = whisperModelSelect.value;
+    if (whisperPipeline && loadedWhisperModel === modelId) return whisperPipeline;
+
+    const lib = await loadTransformers();
+    whisperModelSelect.disabled = true;
+    whisperProgressTrack.classList.add('visible');
+    whisperProgressFill.style.width = '0%';
+
+    try {
+      whisperPipeline = await lib.pipeline('automatic-speech-recognition', modelId, {
+        progress_callback: (data) => {
+          if (data && data.status === 'progress' && data.total) {
+            const pct = Math.round((data.loaded / data.total) * 100);
+            whisperProgressFill.style.width = pct + '%';
+            setStatus(whisperStatus, `モデルをダウンロード中… ${pct}%（${data.file || ''}）`, 'loading');
+          } else if (data && data.status) {
+            setStatus(whisperStatus, `準備中: ${data.status}`, 'loading');
+          }
+        }
+      });
+      loadedWhisperModel = modelId;
+      return whisperPipeline;
+    } finally {
+      whisperModelSelect.disabled = false;
+      whisperProgressTrack.classList.remove('visible');
+    }
+  }
+
+  async function decodeToMono16k(blob) {
+    const arrayBuffer = await blob.arrayBuffer();
+    const decodeCtx = new AudioContext();
+    const decoded = await decodeCtx.decodeAudioData(arrayBuffer);
+    await decodeCtx.close();
+
+    const targetRate = 16000;
+    const offlineCtx = new OfflineAudioContext(1, Math.ceil(decoded.duration * targetRate), targetRate);
+    const source = offlineCtx.createBufferSource();
+    source.buffer = decoded;
+    source.connect(offlineCtx.destination);
+    source.start();
+    const rendered = await offlineCtx.startRendering();
+    return rendered.getChannelData(0);
+  }
+
+  async function transcribeRecording() {
+    if (!audioBlob) return;
+    transcribeBtn.disabled = true;
+
+    try {
+      setStatus(whisperStatus, '録音データを変換しています…', 'loading');
+      const samples = await decodeToMono16k(audioBlob);
+
+      setStatus(whisperStatus, '文字起こしAIモデルを準備しています…', 'loading');
+      const transcriber = await ensureWhisperLoaded();
+
+      whisperStatus.innerHTML = '<span class="spinner"></span>文字起こし中…（録音時間によっては数分かかります）';
+      whisperStatus.className = 'status loading';
+
+      const result = await transcriber(samples, {
+        language: 'japanese',
+        task: 'transcribe',
+        chunk_length_s: 30,
+        stride_length_s: 5
+      });
+
+      const text = (result && result.text ? result.text : '').trim();
+      if (!text) throw new Error('文字起こし結果が空でした。録音内容をご確認ください。');
+
+      if (transcriptInput.value.trim()) {
+        const overwrite = confirm('文字起こし欄に既存の内容があります。上書きしますか？\n（キャンセルすると末尾に追記します）');
+        transcriptInput.value = overwrite ? text : (transcriptInput.value.trim() + '\n\n' + text);
+      } else {
+        transcriptInput.value = text;
+      }
+
+      setStatus(whisperStatus, '文字起こしが完了し、下の入力欄に反映しました。', 'success');
+      transcriptInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (e) {
+      console.error(e);
+      setStatus(whisperStatus, 'エラー: ' + e.message, 'error');
+    } finally {
+      transcribeBtn.disabled = !audioBlob;
+    }
+  }
+
+  transcribeBtn.addEventListener('click', transcribeRecording);
 </script>
 </body>
 </html>
