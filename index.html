@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zoom議事録・要約ツール（無料・ブラウザ内AI）</title>
+<title>COMPASS シーズンボーダー予想ツール</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -11,15 +11,23 @@
     --card: #ffffff;
     --text: #1c1e21;
     --text-muted: #6b7280;
+    --text-secondary: #52514e;
     --border: #e2e4e9;
     --accent: #4f6df5;
     --accent-hover: #3d5ae0;
     --danger: #e0554f;
-    --danger-hover: #c94842;
-    --success: #4f9d5a;
-    --record: #e0554f;
     --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
-    --code-bg: #f0f1f4;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --muted-ink: #898781;
+    --series-1: #2a78d6;
+    --series-2: #008300;
+    --series-3: #e87ba4;
+    --series-4: #eda100;
+    --series-5: #1baf7a;
+    --series-6: #eb6834;
+    --series-7: #4a3aa7;
+    --series-8: #e34948;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -27,15 +35,23 @@
       --card: #1e2126;
       --text: #e8e9ec;
       --text-muted: #9aa0aa;
+      --text-secondary: #c3c2b7;
       --border: #2c2f36;
       --accent: #6d87ff;
       --accent-hover: #8398ff;
       --danger: #f0716c;
-      --danger-hover: #f58c87;
-      --success: #6fbf7c;
-      --record: #f0716c;
       --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
-      --code-bg: #262a31;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --muted-ink: #898781;
+      --series-1: #3987e5;
+      --series-2: #008300;
+      --series-3: #d55181;
+      --series-4: #c98500;
+      --series-5: #199e70;
+      --series-6: #d95926;
+      --series-7: #9085e9;
+      --series-8: #e66767;
     }
   }
   * { box-sizing: border-box; }
@@ -47,7 +63,7 @@
     min-height: 100vh;
   }
   .wrap {
-    max-width: 980px;
+    max-width: 960px;
     margin: 0 auto;
     padding: 32px 20px 80px;
   }
@@ -58,979 +74,793 @@
   }
   .subtitle {
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 12.5px;
+    margin: 0 0 8px;
+    line-height: 1.6;
+  }
+  .disclaimer {
+    color: var(--text-muted);
+    font-size: 11.5px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
     margin: 0 0 24px;
+    line-height: 1.6;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 32px 0 12px;
+  }
+  h3 {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin: 0 0 8px;
   }
   .card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
     box-shadow: var(--shadow);
   }
-  .card h2 {
-    font-size: 15px;
-    font-weight: 700;
-    margin: 0 0 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  .form-grid {
+    padding: 16px;
+    display: grid;
     gap: 10px;
-    flex-wrap: wrap;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    align-items: end;
   }
-  label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: var(--text-muted);
-  }
-  .field {
-    margin-bottom: 14px;
-  }
-  .row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .row .field {
-    flex: 1;
-    min-width: 160px;
-  }
-  input[type="text"],
-  input[type="password"],
-  input[type="date"],
-  select,
-  textarea {
-    width: 100%;
-    padding: 9px 11px;
-    border: 1px solid var(--border);
+  .field { display: grid; gap: 4px; }
+  .field label { font-size: 11.5px; color: var(--text-muted); }
+  input[type=text], input[type=number], input[type=datetime-local], select {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
     border-radius: 8px;
+    border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text);
-    font-size: 14px;
-    font-family: inherit;
+    width: 100%;
   }
-  textarea {
-    resize: vertical;
-    line-height: 1.5;
-  }
-  #transcript {
-    min-height: 220px;
-  }
-  #output-area textarea {
-    min-height: 320px;
-    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-    font-size: 13px;
-  }
-  .hint {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 4px;
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
   }
   button {
     font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
+    cursor: pointer;
     border: none;
     border-radius: 8px;
-    padding: 10px 18px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .btn-primary {
-    background: var(--accent);
-    color: #fff;
-  }
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-  }
-  .btn-primary:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-  .btn-record {
-    background: var(--record);
-    color: #fff;
-  }
-  .btn-record:hover:not(:disabled) {
-    filter: brightness(0.92);
-  }
-  .btn-record:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-  .btn-secondary {
-    background: var(--code-bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover:not(:disabled) {
-    filter: brightness(0.96);
-  }
-  .btn-secondary:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-  .btn-row {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 6px;
-    align-items: center;
-  }
-  .status {
-    font-size: 13px;
-    margin-top: 10px;
-    min-height: 18px;
-  }
-  .status.error { color: var(--danger); }
-  .status.success { color: var(--success); }
-  .status.loading { color: var(--text-muted); }
-  .spinner {
-    display: inline-block;
-    width: 13px;
-    height: 13px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    vertical-align: -2px;
-    margin-right: 6px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .model-badge {
-    display: inline-block;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 999px;
-    background: var(--code-bg);
-    color: var(--text-muted);
-  }
-  .model-badge.ready { background: rgba(79,157,90,0.15); color: var(--success); }
-  .progress-track {
-    width: 100%;
-    height: 8px;
-    border-radius: 999px;
-    background: var(--code-bg);
-    overflow: hidden;
-    margin-top: 10px;
-    display: none;
-  }
-  .progress-track.visible { display: block; }
-  .progress-fill {
-    height: 100%;
-    width: 0%;
-    background: var(--accent);
-    transition: width 0.2s ease;
-  }
-  .note-box {
-    font-size: 12px;
-    color: var(--text-muted);
-    line-height: 1.6;
-    background: var(--code-bg);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 14px;
-  }
-  .warn-box {
-    font-size: 13px;
-    color: var(--danger);
-    background: rgba(224,85,79,0.1);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 14px;
-    display: none;
-  }
-  .warn-box.visible { display: block; }
-  .consent-box {
-    font-size: 12px;
-    color: var(--text);
-    background: rgba(224,85,79,0.08);
-    border: 1px solid rgba(224,85,79,0.25);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 14px;
-    line-height: 1.6;
-  }
-  #output-wrap { display: none; }
-  #output-wrap.visible { display: block; }
-  .rendered {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 18px;
-    font-size: 14px;
-    line-height: 1.75;
-    max-height: 560px;
-    overflow-y: auto;
-  }
-  .rendered h1, .rendered h2, .rendered h3 {
-    margin: 18px 0 8px;
-  }
-  .rendered h1:first-child, .rendered h2:first-child, .rendered h3:first-child { margin-top: 0; }
-  .rendered ul, .rendered ol { padding-left: 22px; }
-  .rendered table {
-    border-collapse: collapse;
-    margin: 10px 0;
-  }
-  .rendered th, .rendered td {
-    border: 1px solid var(--border);
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-  .view-tabs {
-    display: flex;
-    gap: 6px;
-  }
-  .view-tab {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    font-size: 12px;
+    font-size: 13.5px;
     font-weight: 600;
-    padding: 5px 12px;
-    border-radius: 6px;
+    padding: 9px 16px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text-muted); }
+  .btn-danger-ghost {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--border);
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  .btn-danger-ghost:hover { border-color: var(--danger); }
+
+  .season-list { display: grid; gap: 10px; margin-top: 12px; }
+  .season-card { padding: 14px 16px; }
+  .season-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
     cursor: pointer;
   }
-  .view-tab.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
+  .season-title { font-size: 14.5px; font-weight: 700; }
+  .season-period { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .season-status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 100px;
+    background: var(--bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    white-space: nowrap;
   }
-  #recorded-audio {
+  .season-status.ended { color: var(--accent); border-color: var(--accent); }
+  .season-body { margin-top: 14px; display: none; }
+  .season-body.open { display: block; }
+  .season-body .form-grid { padding: 0 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  table.points-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.points-table th, table.points-table td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  table.points-table th { color: var(--text-muted); font-weight: 600; }
+  .empty-note { color: var(--text-muted); font-size: 12.5px; padding: 12px 2px; }
+
+  .predict-panel { padding: 18px; margin-top: 12px; }
+  .border-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 14px; }
+  .border-box { border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .border-box .rank { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+  .border-box .predicted { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .border-box .range { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .border-box .meta { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; line-height: 1.6; }
+  .contrib-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 8px; }
+  .contrib-table th, .contrib-table td { text-align: left; padding: 3px 4px; font-variant-numeric: tabular-nums; }
+  .contrib-table th { color: var(--text-muted); font-weight: 600; }
+
+  .chart-section { margin-top: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 4px 4px; font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+  .legend-swatch { width: 16px; height: 2px; border-radius: 2px; flex-shrink: 0; }
+  .chart-box { padding: 12px; margin-top: 10px; position: relative; }
+  canvas.chart-canvas { width: 100%; display: block; touch-action: none; }
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 11.5px;
+    box-shadow: var(--shadow);
     display: none;
-    width: 100%;
-    margin-top: 10px;
+    z-index: 10;
+    min-width: 140px;
   }
+  .tooltip .t-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .tooltip .t-row:first-child { margin-top: 0; }
+  .tooltip .t-key { width: 12px; height: 2px; border-radius: 2px; flex-shrink: 0; }
+  .tooltip .t-name { color: var(--text-secondary); flex: 1; }
+  .tooltip .t-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tooltip .t-head { color: var(--text-muted); font-size: 10.5px; margin-bottom: 4px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Zoom議事録・要約ツール</h1>
-  <p class="subtitle">会議を録音して自動文字起こし、またはテキストを貼り付けるだけで、ブラウザ内で動くAIが議事録形式に整形・要約します。API課金は発生しません。</p>
-
-  <div class="warn-box" id="webgpu-warn">
-    お使いのブラウザはWebGPUに対応していないため、議事録生成AIを利用できません。最新版のChromeまたはEdge（PC版）でお試しください。
+  <h1>COMPASS シーズンボーダー予想ツール</h1>
+  <p class="subtitle">過去シーズンの「経過率ごとのポイント到達率」を参照し、今シーズンの途中経過から最終ボーダーを予想します。</p>
+  <div class="disclaimer">
+    非公式のファンメイド予想ツールです。COMPASS運営・NHN PlayArtとは関係ありません。データはこのブラウザのlocalStorageにのみ保存され、他端末とは同期しません。予想値はあくまで過去シーズンの傾向に基づく参考値であり、的中を保証するものではありません。
   </div>
 
-  <div class="card">
-    <h2>
-      1. 要約AIモデル
-      <span class="model-badge" id="model-badge">未読み込み</span>
-    </h2>
-    <div class="note-box">
-      完全無料・課金なしで動作します。初回のみモデルデータ（数百MB〜2GB程度）をブラウザにダウンロードし、以降はこの端末のキャッシュから読み込まれます。
-      文字起こしデータが外部サーバーに送信されることはありません。処理はすべてこの端末のブラウザ内で完結します。
+  <h2>シーズン管理</h2>
+  <div class="card form-grid" id="add-season-form">
+    <div class="field">
+      <label for="season-name">シーズン名</label>
+      <input type="text" id="season-name" placeholder="例: シーズン12" maxlength="60">
     </div>
     <div class="field">
-      <label for="model-select">モデルを選択</label>
-      <select id="model-select"></select>
-      <p class="hint">値が小さいモデルほど高速・軽量ですが、要約の質はClaudeなどのクラウドAIより劣ります。まずは既定のモデルでお試しください。</p>
-    </div>
-    <div class="btn-row">
-      <button class="btn-secondary" id="load-model-btn">モデルを読み込む</button>
-    </div>
-    <div class="progress-track" id="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-    <div class="status" id="model-status"></div>
-  </div>
-
-  <div class="card">
-    <h2>2. 会議情報（任意）</h2>
-    <div class="row">
-      <div class="field">
-        <label for="meeting-title">会議名</label>
-        <input type="text" id="meeting-title" placeholder="例）定例ミーティング">
-      </div>
-      <div class="field">
-        <label for="meeting-date">日時</label>
-        <input type="date" id="meeting-date">
-      </div>
+      <label for="season-start">開始日時</label>
+      <input type="datetime-local" id="season-start">
     </div>
     <div class="field">
-      <label for="meeting-participants">参加者</label>
-      <input type="text" id="meeting-participants" placeholder="例）田中, 佐藤, 鈴木（未入力の場合は文字起こしから自動推定）">
+      <label for="season-end">終了日時</label>
+      <input type="datetime-local" id="season-end">
     </div>
+    <button class="btn-primary" id="add-season-btn">シーズンを追加</button>
   </div>
 
-  <div class="card">
-    <h2>3. 会議を録音して自動文字起こし（任意）</h2>
-    <div class="consent-box">
-      他の参加者の声を録音する場合は、事前に参加者全員の同意を得てください。国・地域や社内規定によっては、同意なしの録音が法律・規約に抵触する場合があります。
-    </div>
-    <div class="warn-box" id="record-warn">
-      このブラウザは録音機能（マイク入力）に対応していません。
-    </div>
-    <div class="note-box">
-      録音データ・文字起こし処理はすべてこの端末のブラウザ内で行われ、外部には送信されません。「録音開始」を押すとマイクの利用許可、続いて画面共有の選択ダイアログが表示されます。
-      相手の声（Zoomの再生音声）も録音したい場合は、共有ダイアログで画面全体またはウィンドウを選び「システム音声を共有」にチェックを入れてください（Windows + Chrome/Edgeでの動作を想定。対応していない環境や共有をキャンセルした場合は自動的にマイクのみの録音になります）。
-      <br>※ このファイルを<code>file://</code>のまま直接開いている場合、ブラウザの制限により録音機能が動作しないことがあります。動作しない場合は簡易ローカルサーバー経由で開いてください。
-    </div>
-    <div class="btn-row">
-      <button class="btn-record" id="record-btn">録音開始</button>
-      <span class="model-badge" id="record-timer">00:00</span>
-      <button class="btn-secondary" id="discard-btn" disabled>録音を破棄</button>
-    </div>
-    <div class="status" id="record-status"></div>
-    <audio id="recorded-audio" controls></audio>
+  <div class="season-list" id="season-list"></div>
 
-    <div class="field" style="margin-top:18px;">
-      <label for="whisper-model-select">文字起こしAIモデル</label>
-      <select id="whisper-model-select">
-        <option value="Xenova/whisper-tiny">Xenova/whisper-tiny（軽量・高速、目安75MB）</option>
-        <option value="Xenova/whisper-base" selected>Xenova/whisper-base（標準・推奨、目安145MB）</option>
-        <option value="Xenova/whisper-small">Xenova/whisper-small（高精度・低速、目安250MB）</option>
-      </select>
-      <p class="hint">録音時間が長いほど処理に時間がかかります（1時間の録音で数分〜十数分程度が目安）。</p>
-    </div>
-    <div class="btn-row">
-      <button class="btn-secondary" id="transcribe-btn" disabled>文字起こしを実行</button>
-    </div>
-    <div class="progress-track" id="whisper-progress-track"><div class="progress-fill" id="whisper-progress-fill"></div></div>
-    <div class="status" id="whisper-status"></div>
-  </div>
-
-  <div class="card">
-    <h2>4. 文字起こしを確認して議事録を生成</h2>
+  <h2>ボーダー予想</h2>
+  <div class="card predict-panel">
     <div class="field">
-      <label for="transcript">文字起こし・メモ</label>
-      <textarea id="transcript" placeholder="上の「録音して自動文字起こし」で自動入力するか、Zoomの文字起こしなどをここに直接貼り付けてください。"></textarea>
-      <p class="hint">Zoomの文字起こしは「その他 → トランスクリプトを表示 → コピー」で取得できます。ローカルAIは扱える文章量に限りがあるため、長すぎる場合はエラーになることがあります（その際は分割して実行してください）。</p>
+      <label for="predict-season-select">予想対象シーズン</label>
+      <select id="predict-season-select"></select>
     </div>
-    <div class="btn-row">
-      <button class="btn-primary" id="generate-btn">議事録を生成</button>
-    </div>
-    <div class="status" id="status"></div>
+    <div class="border-grid" id="predict-result"></div>
   </div>
 
-  <div class="card" id="output-wrap">
-    <h2>
-      生成結果
-      <div class="view-tabs">
-        <button class="view-tab active" id="tab-rendered">プレビュー</button>
-        <button class="view-tab" id="tab-raw">Markdown</button>
-      </div>
-    </h2>
-    <div id="output-area">
-      <div class="rendered" id="rendered-view"></div>
-      <textarea id="raw-view" style="display:none" readonly></textarea>
+  <h2>ポイント推移グラフ<span style="font-weight:400;font-size:12px;color:var(--text-muted);">（横軸: シーズン経過率 / 縦軸: ポイント）</span></h2>
+  <div class="legend" id="chart-legend"></div>
+  <div class="chart-section" id="chart-section">
+    <div class="card chart-box">
+      <h3>10位ボーダー</h3>
+      <canvas class="chart-canvas" id="chart-10" height="220"></canvas>
+      <div class="tooltip" id="tooltip-10"></div>
     </div>
-    <div class="btn-row" style="margin-top:14px;">
-      <button class="btn-secondary" id="copy-btn">Markdownをコピー</button>
-      <button class="btn-secondary" id="download-btn">.mdをダウンロード</button>
+    <div class="card chart-box">
+      <h3>500位ボーダー</h3>
+      <canvas class="chart-canvas" id="chart-500" height="220"></canvas>
+      <div class="tooltip" id="tooltip-500"></div>
+    </div>
+    <div class="card chart-box">
+      <h3>5000位ボーダー</h3>
+      <canvas class="chart-canvas" id="chart-5000" height="220"></canvas>
+      <div class="tooltip" id="tooltip-5000"></div>
     </div>
   </div>
 </div>
 
-<script type="module">
-  const titleInput = document.getElementById('meeting-title');
-  const dateInput = document.getElementById('meeting-date');
-  const participantsInput = document.getElementById('meeting-participants');
-  const transcriptInput = document.getElementById('transcript');
-  const generateBtn = document.getElementById('generate-btn');
-  const statusEl = document.getElementById('status');
+<script>
+const STORAGE_KEY = 'compass-border-tool-v1';
+const BORDERS = [10, 500, 5000];
+const SERIES_VARS = ['--series-1','--series-2','--series-3','--series-4','--series-5','--series-6','--series-7','--series-8'];
 
-  const webgpuWarn = document.getElementById('webgpu-warn');
-  const modelSelect = document.getElementById('model-select');
-  const loadModelBtn = document.getElementById('load-model-btn');
-  const modelBadge = document.getElementById('model-badge');
-  const modelStatus = document.getElementById('model-status');
-  const progressTrack = document.getElementById('progress-track');
-  const progressFill = document.getElementById('progress-fill');
+let state = loadState();
+const openSeasons = new Set();
 
-  const outputWrap = document.getElementById('output-wrap');
-  const renderedView = document.getElementById('rendered-view');
-  const rawView = document.getElementById('raw-view');
-  const tabRendered = document.getElementById('tab-rendered');
-  const tabRaw = document.getElementById('tab-raw');
-  const copyBtn = document.getElementById('copy-btn');
-  const downloadBtn = document.getElementById('download-btn');
-
-  const recordWarn = document.getElementById('record-warn');
-  const recordBtn = document.getElementById('record-btn');
-  const recordTimer = document.getElementById('record-timer');
-  const discardBtn = document.getElementById('discard-btn');
-  const recordStatus = document.getElementById('record-status');
-  const recordedAudioEl = document.getElementById('recorded-audio');
-  const whisperModelSelect = document.getElementById('whisper-model-select');
-  const transcribeBtn = document.getElementById('transcribe-btn');
-  const whisperProgressTrack = document.getElementById('whisper-progress-track');
-  const whisperProgressFill = document.getElementById('whisper-progress-fill');
-  const whisperStatus = document.getElementById('whisper-status');
-
-  function setStatus(el, text, kind) {
-    el.textContent = text;
-    el.className = 'status' + (kind ? ' ' + kind : '');
+function loadState() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"seasons":[]}');
+    if (!raw.seasons) raw.seasons = [];
+    return raw;
+  } catch (e) {
+    return { seasons: [] };
   }
+}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
-  // --- WebGPU対応チェック（要約AI用） ---
-  if (!('gpu' in navigator)) {
-    webgpuWarn.classList.add('visible');
-    generateBtn.disabled = true;
-    loadModelBtn.disabled = true;
-    modelSelect.disabled = true;
+function seasonById(id) { return state.seasons.find(s => s.id === id); }
+
+function toLocalInputValue(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fmtNum(n) {
+  if (n === null || n === undefined || isNaN(n)) return '-';
+  return Math.round(n).toLocaleString('ja-JP');
+}
+
+function fmtPct(r) {
+  if (r === null || r === undefined || isNaN(r)) return '-';
+  return (r * 100).toFixed(1) + '%';
+}
+
+// ---------- Season CRUD ----------
+
+function addSeason() {
+  const nameInput = document.getElementById('season-name');
+  const startInput = document.getElementById('season-start');
+  const endInput = document.getElementById('season-end');
+  const name = nameInput.value.trim();
+  if (!name || !startInput.value || !endInput.value) {
+    alert('シーズン名・開始日時・終了日時をすべて入力してください。');
+    return;
   }
-
-  // --- 録音対応チェック ---
-  const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-  if (!canRecord) {
-    recordWarn.classList.add('visible');
-    recordBtn.disabled = true;
+  const startAt = new Date(startInput.value).toISOString();
+  const endAt = new Date(endInput.value).toISOString();
+  if (new Date(endAt) <= new Date(startAt)) {
+    alert('終了日時は開始日時より後にしてください。');
+    return;
   }
+  const season = { id: uid(), name, startAt, endAt, borders: { 10: [], 500: [], 5000: [] } };
+  state.seasons.push(season);
+  state.seasons.sort((a, b) => new Date(a.startAt) - new Date(b.startAt));
+  nameInput.value = '';
+  startInput.value = '';
+  endInput.value = '';
+  save();
+  openSeasons.add(season.id);
+  renderAll();
+}
 
-  // --- ごく簡易なMarkdown → HTML変換（表示用。外部ライブラリ不使用） ---
-  function escapeHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+function deleteSeason(id) {
+  const s = seasonById(id);
+  if (!s) return;
+  if (!confirm(`シーズン「${s.name}」を削除します。記録したポイントデータもすべて削除されます。よろしいですか？`)) return;
+  state.seasons = state.seasons.filter(x => x.id !== id);
+  openSeasons.delete(id);
+  save();
+  renderAll();
+}
 
-  function renderMarkdown(md) {
-    const lines = md.split('\n');
-    let html = '';
-    let inList = null; // 'ul' | 'ol'
-    let inTable = false;
-    let tableRows = [];
+function addPoint(seasonId, border, t, points) {
+  const s = seasonById(seasonId);
+  if (!s) return;
+  s.borders[border].push({ id: uid(), t: new Date(t).toISOString(), points });
+  s.borders[border].sort((a, b) => new Date(a.t) - new Date(b.t));
+  save();
+  renderAll();
+}
 
-    function closeList() {
-      if (inList) { html += `</${inList}>`; inList = null; }
+function deletePoint(seasonId, border, pointId) {
+  const s = seasonById(seasonId);
+  if (!s) return;
+  s.borders[border] = s.borders[border].filter(p => p.id !== pointId);
+  save();
+  renderAll();
+}
+
+// ---------- Ratio / prediction math ----------
+
+function seasonRange(season) {
+  return [new Date(season.startAt).getTime(), new Date(season.endAt).getTime()];
+}
+
+function ratioSeries(season, border) {
+  const [s, e] = seasonRange(season);
+  const span = e - s;
+  return season.borders[border]
+    .map(p => ({ r: span > 0 ? (new Date(p.t).getTime() - s) / span : 0, points: p.points, t: p.t }))
+    .sort((a, b) => a.r - b.r);
+}
+
+function interpolateAt(series, r) {
+  if (series.length === 0) return null;
+  if (r < series[0].r - 1e-9 || r > series[series.length - 1].r + 1e-9) return null;
+  for (let i = 0; i < series.length - 1; i++) {
+    const a = series[i], b = series[i + 1];
+    if (r >= a.r && r <= b.r) {
+      if (b.r === a.r) return a.points;
+      const t = (r - a.r) / (b.r - a.r);
+      return a.points + (b.points - a.points) * t;
     }
-    function inlineFormat(text) {
-      text = escapeHtml(text);
-      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
-      text = text.replace(/`(.+?)`/g, '<code>$1</code>');
-      return text;
-    }
-    function flushTable() {
-      if (!tableRows.length) return;
-      html += '<table>';
-      tableRows.forEach((cells, i) => {
-        const tag = i === 0 ? 'th' : 'td';
-        html += '<tr>' + cells.map(c => `<${tag}>${inlineFormat(c.trim())}</${tag}>`).join('') + '</tr>';
-      });
-      html += '</table>';
-      tableRows = [];
-      inTable = false;
-    }
+  }
+  return series[series.length - 1].points;
+}
 
-    for (let raw of lines) {
-      const trimmed = raw.trim();
+const MIN_REFERENCE_COVERAGE = 0.9;
 
-      if (/^\|.*\|$/.test(trimmed)) {
-        if (/^\|[\s:-]+\|$/.test(trimmed)) continue; // 区切り行はスキップ
-        inTable = true;
-        const cells = trimmed.slice(1, -1).split('|');
-        tableRows.push(cells);
-        continue;
-      } else if (inTable) {
-        flushTable();
+function predictBorder(targetSeason, border) {
+  const targetSeries = ratioSeries(targetSeason, border);
+  if (targetSeries.length === 0) return null;
+  const latest = targetSeries[targetSeries.length - 1];
+  const targetRatio = Math.min(Math.max(latest.r, 0), 1);
+
+  const contributions = [];
+  for (const refSeason of state.seasons) {
+    if (refSeason.id === targetSeason.id) continue;
+    const refSeries = ratioSeries(refSeason, border);
+    if (refSeries.length < 2) continue;
+    const finalPoint = refSeries[refSeries.length - 1];
+    if (finalPoint.r < MIN_REFERENCE_COVERAGE) continue;
+    if (finalPoint.points <= 0) continue;
+    const atRatio = interpolateAt(refSeries, targetRatio);
+    if (atRatio === null || atRatio <= 0) continue;
+    const progress = atRatio / finalPoint.points;
+    if (progress <= 0) continue;
+    contributions.push({
+      seasonName: refSeason.name,
+      progress,
+      predicted: latest.points / progress,
+      coverageR: finalPoint.r
+    });
+  }
+
+  const result = { latest, targetRatio, contributions, avg: null, min: null, max: null, median: null };
+  if (contributions.length > 0) {
+    const values = contributions.map(c => c.predicted);
+    result.avg = values.reduce((a, b) => a + b, 0) / values.length;
+    result.min = Math.min(...values);
+    result.max = Math.max(...values);
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    result.median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  return result;
+}
+
+// ---------- Rendering: season list ----------
+
+function seasonStatus(season) {
+  const now = Date.now();
+  const [s, e] = seasonRange(season);
+  if (now < s) return { label: '開始前', ended: false };
+  if (now > e) return { label: '終了', ended: true };
+  return { label: '進行中', ended: false };
+}
+
+function renderSeasonList() {
+  const listEl = document.getElementById('season-list');
+  listEl.innerHTML = '';
+
+  if (state.seasons.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-note';
+    empty.textContent = 'シーズンが登録されていません。上のフォームから追加してください。過去シーズンを追加する場合は、シーズン終了時点（または終了間際）のポイントも1件記録すると予想精度が上がります。';
+    listEl.appendChild(empty);
+    return;
+  }
+
+  for (const season of state.seasons) {
+    const card = document.createElement('div');
+    card.className = 'card season-card';
+
+    const head = document.createElement('div');
+    head.className = 'season-head';
+    const status = seasonStatus(season);
+    head.innerHTML = `
+      <div>
+        <div class="season-title"></div>
+        <div class="season-period"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="season-status${status.ended ? ' ended' : ''}"></span>
+        <button class="btn-danger-ghost" data-action="delete">削除</button>
+      </div>
+    `;
+    head.querySelector('.season-title').textContent = season.name;
+    head.querySelector('.season-period').textContent = `${fmtDateTime(season.startAt)} 〜 ${fmtDateTime(season.endAt)}`;
+    head.querySelector('.season-status').textContent = status.label;
+    head.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteSeason(season.id);
+    });
+    head.addEventListener('click', () => {
+      if (openSeasons.has(season.id)) openSeasons.delete(season.id);
+      else openSeasons.add(season.id);
+      renderSeasonList();
+    });
+    card.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'season-body' + (openSeasons.has(season.id) ? ' open' : '');
+
+    const formGrid = document.createElement('div');
+    formGrid.className = 'form-grid';
+    formGrid.innerHTML = `
+      <div class="field">
+        <label>順位</label>
+        <select class="point-border-select">
+          <option value="10">10位</option>
+          <option value="500">500位</option>
+          <option value="5000">5000位</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>日時</label>
+        <input type="datetime-local" class="point-t-input">
+      </div>
+      <div class="field">
+        <label>ポイント</label>
+        <input type="number" class="point-points-input" min="0" step="1" placeholder="例: 1234567">
+      </div>
+      <button class="btn-primary point-add-btn">記録を追加</button>
+    `;
+    const tInput = formGrid.querySelector('.point-t-input');
+    tInput.value = toLocalInputValue(new Date());
+    formGrid.querySelector('.point-add-btn').addEventListener('click', () => {
+      const border = formGrid.querySelector('.point-border-select').value;
+      const t = tInput.value;
+      const points = Number(formGrid.querySelector('.point-points-input').value);
+      if (!t || !Number.isFinite(points) || points < 0) {
+        alert('日時とポイント（0以上の数値）を入力してください。');
+        return;
       }
+      addPoint(season.id, border, t, points);
+      openSeasons.add(season.id);
+    });
+    body.appendChild(formGrid);
 
-      if (trimmed === '') { closeList(); continue; }
-
-      let m;
-      if ((m = trimmed.match(/^(#{1,3})\s+(.*)$/))) {
-        closeList();
-        const level = m[1].length;
-        html += `<h${level}>${inlineFormat(m[2])}</h${level}>`;
-      } else if ((m = trimmed.match(/^[-*]\s+(.*)$/))) {
-        if (inList !== 'ul') { closeList(); html += '<ul>'; inList = 'ul'; }
-        html += `<li>${inlineFormat(m[1])}</li>`;
-      } else if ((m = trimmed.match(/^\d+\.\s+(.*)$/))) {
-        if (inList !== 'ol') { closeList(); html += '<ol>'; inList = 'ol'; }
-        html += `<li>${inlineFormat(m[1])}</li>`;
-      } else {
-        closeList();
-        html += `<p>${inlineFormat(trimmed)}</p>`;
-      }
+    const allPoints = [];
+    for (const b of BORDERS) {
+      for (const p of season.borders[b]) allPoints.push({ ...p, border: b });
     }
-    closeList();
-    flushTable();
-    return html;
-  }
+    allPoints.sort((a, b) => new Date(b.t) - new Date(a.t));
 
-  // --- タブ切り替え ---
-  tabRendered.addEventListener('click', () => {
-    tabRendered.classList.add('active');
-    tabRaw.classList.remove('active');
-    renderedView.style.display = '';
-    rawView.style.display = 'none';
-  });
-  tabRaw.addEventListener('click', () => {
-    tabRaw.classList.add('active');
-    tabRendered.classList.remove('active');
-    rawView.style.display = '';
-    renderedView.style.display = 'none';
-  });
-
-  copyBtn.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(rawView.value);
-      const orig = copyBtn.textContent;
-      copyBtn.textContent = 'コピーしました';
-      setTimeout(() => { copyBtn.textContent = orig; }, 1500);
-    } catch (e) {
-      alert('コピーに失敗しました: ' + e.message);
-    }
-  });
-
-  downloadBtn.addEventListener('click', () => {
-    const blob = new Blob([rawView.value], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const titleSlug = (titleInput.value.trim() || '議事録').replace(/[\\/:*?"<>|]/g, '_');
-    const dateSlug = dateInput.value || new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `${dateSlug}_${titleSlug}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
-
-  function buildPrompt() {
-    const title = titleInput.value.trim();
-    const date = dateInput.value;
-    const participants = participantsInput.value.trim();
-    const transcript = transcriptInput.value.trim();
-
-    const metaLines = [];
-    if (title) metaLines.push(`会議名: ${title}`);
-    if (date) metaLines.push(`日時: ${date}`);
-    if (participants) metaLines.push(`参加者（ユーザー指定）: ${participants}`);
-    const meta = metaLines.length ? metaLines.join('\n') + '\n\n' : '';
-
-    return `以下はミーティングの文字起こし（またはメモ）です。これをもとに、日本語で議事録を作成し、末尾に要約を付けてください。
-出力はMarkdown形式で、次の構成にしてください（情報がない項目は「情報なし」と書いてください）。
-
-# 議事録
-
-- 日時:
-- 参加者:
-
-## 議題
-
-## 主な議論内容
-
-## 決定事項
-
-## アクションアイテム
-| 担当者 | タスク | 期限 |
-|---|---|---|
-
-## 要約
-(3〜5行で要点をまとめる)
-
-${meta}文字起こし:
-"""
-${transcript}
-"""`;
-  }
-
-  // ============================================================
-  // 要約AI（WebLLM）
-  // ============================================================
-  let webllm = null;
-  let engine = null;
-  let loadedModelId = null;
-
-  async function loadWebLLM() {
-    if (webllm) return webllm;
-    setStatus(modelStatus, 'ライブラリを読み込み中…', 'loading');
-    webllm = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/+esm');
-    return webllm;
-  }
-
-  function pickDefaultModel(list) {
-    const priority = [
-      'Qwen2.5-3B-Instruct',
-      'Qwen2.5-1.5B-Instruct',
-      'Llama-3.2-3B-Instruct',
-      'Llama-3.2-1B-Instruct',
-      'Qwen2.5-0.5B-Instruct'
-    ];
-    for (const name of priority) {
-      const found = list.find(m => m.model_id.includes(name));
-      if (found) return found.model_id;
-    }
-    return list.length ? list[0].model_id : null;
-  }
-
-  async function populateModelList() {
-    try {
-      const lib = await loadWebLLM();
-      const all = lib.prebuiltAppConfig.model_list || [];
-      let modelList = all.filter(m => {
-        const id = m.model_id || '';
-        if (!/instruct/i.test(id)) return false;
-        if (/vision|embed/i.test(id)) return false;
-        if (typeof m.vram_required_MB === 'number' && m.vram_required_MB > 4500) return false;
-        return true;
-      }).sort((a, b) => (a.vram_required_MB || 0) - (b.vram_required_MB || 0));
-
-      if (!modelList.length) modelList = all;
-
-      modelSelect.innerHTML = '';
-      modelList.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m.model_id;
-        const size = m.vram_required_MB ? `（目安VRAM: ${Math.round(m.vram_required_MB)}MB）` : '';
-        opt.textContent = m.model_id + size;
-        modelSelect.appendChild(opt);
-      });
-
-      const defaultId = pickDefaultModel(modelList);
-      if (defaultId) modelSelect.value = defaultId;
-
-      setStatus(modelStatus, 'モデル一覧を取得しました。「モデルを読み込む」を押してください。', '');
-    } catch (e) {
-      console.error(e);
-      setStatus(modelStatus, 'モデル一覧の取得に失敗しました: ' + e.message, 'error');
-    }
-  }
-
-  async function ensureEngineLoaded() {
-    const selectedId = modelSelect.value;
-    if (engine && loadedModelId === selectedId) return engine;
-
-    const lib = await loadWebLLM();
-    loadModelBtn.disabled = true;
-    modelSelect.disabled = true;
-    progressTrack.classList.add('visible');
-    progressFill.style.width = '0%';
-    modelBadge.textContent = '読み込み中…';
-    modelBadge.classList.remove('ready');
-
-    try {
-      engine = await lib.CreateMLCEngine(selectedId, {
-        initProgressCallback: (report) => {
-          const pct = Math.round((report.progress || 0) * 100);
-          progressFill.style.width = pct + '%';
-          setStatus(modelStatus, report.text || `読み込み中… ${pct}%`, 'loading');
-        }
-      });
-      loadedModelId = selectedId;
-      modelBadge.textContent = '読み込み済み: ' + selectedId;
-      modelBadge.classList.add('ready');
-      setStatus(modelStatus, 'モデルの準備ができました。', 'success');
-      return engine;
-    } catch (e) {
-      engine = null;
-      loadedModelId = null;
-      modelBadge.textContent = '未読み込み';
-      modelBadge.classList.remove('ready');
-      throw e;
-    } finally {
-      loadModelBtn.disabled = false;
-      modelSelect.disabled = false;
-      progressTrack.classList.remove('visible');
-    }
-  }
-
-  loadModelBtn.addEventListener('click', async () => {
-    try {
-      await ensureEngineLoaded();
-    } catch (e) {
-      console.error(e);
-      setStatus(modelStatus, 'モデルの読み込みに失敗しました: ' + e.message, 'error');
-    }
-  });
-
-  async function generateMinutes() {
-    const transcript = transcriptInput.value.trim();
-    if (!transcript) {
-      setStatus(statusEl, '文字起こしを入力してください。', 'error');
-      return;
-    }
-
-    generateBtn.disabled = true;
-    outputWrap.classList.remove('visible');
-
-    try {
-      setStatus(statusEl, 'AIモデルを準備しています…', 'loading');
-      const eng = await ensureEngineLoaded();
-
-      statusEl.innerHTML = '<span class="spinner"></span>議事録を生成中…（ローカル実行のため数十秒〜数分かかる場合があります）';
-      statusEl.className = 'status loading';
-
-      const messages = [
-        { role: 'user', content: buildPrompt() }
-      ];
-
-      let fullText = '';
-      const stream = await eng.chat.completions.create({
-        messages,
-        temperature: 0.3,
-        max_tokens: 2048,
-        stream: true
-      });
-
-      outputWrap.classList.add('visible');
-      for await (const chunk of stream) {
-        const delta = chunk.choices?.[0]?.delta?.content || '';
-        if (delta) {
-          fullText += delta;
-          rawView.value = fullText;
-          renderedView.innerHTML = renderMarkdown(fullText);
-        }
-      }
-
-      if (!fullText.trim()) {
-        throw new Error('モデルから応答を取得できませんでした。文字起こしを短くして再度お試しください。');
-      }
-
-      setStatus(statusEl, '議事録を生成しました。', 'success');
-      outputWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (err) {
-      console.error(err);
-      setStatus(statusEl, 'エラー: ' + err.message, 'error');
-    } finally {
-      generateBtn.disabled = false;
-    }
-  }
-
-  generateBtn.addEventListener('click', generateMinutes);
-
-  if ('gpu' in navigator) {
-    populateModelList();
-  }
-
-  // ============================================================
-  // 録音（マイク＋システム音声）
-  // ============================================================
-  let micStream = null;
-  let displayStream = null;
-  let mediaRecorder = null;
-  let recordedChunks = [];
-  let recAudioCtx = null;
-  let recordingStartTime = 0;
-  let timerInterval = null;
-  let audioBlob = null;
-
-  function formatTime(ms) {
-    const totalSec = Math.max(0, Math.floor(ms / 1000));
-    const m = String(Math.floor(totalSec / 60)).padStart(2, '0');
-    const s = String(totalSec % 60).padStart(2, '0');
-    return `${m}:${s}`;
-  }
-
-  function updateTimer() {
-    recordTimer.textContent = formatTime(Date.now() - recordingStartTime);
-  }
-
-  function stopAllTracks(stream) {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-  }
-
-  async function startRecording() {
-    recordBtn.disabled = true;
-    setStatus(recordStatus, 'マイクの許可を確認しています…', 'loading');
-
-    try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (e) {
-      setStatus(recordStatus, 'マイクへのアクセスが許可されませんでした: ' + e.message, 'error');
-      recordBtn.disabled = false;
-      return;
-    }
-
-    displayStream = null;
-    if (navigator.mediaDevices.getDisplayMedia) {
-      try {
-        setStatus(recordStatus, '画面共有（システム音声）の選択を待っています…', 'loading');
-        displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      } catch (e) {
-        displayStream = null; // キャンセル・非対応時はマイクのみで続行
-      }
-    }
-
-    const hasSystemAudio = !!(displayStream && displayStream.getAudioTracks().length);
-
-    recAudioCtx = new AudioContext();
-    const dest = recAudioCtx.createMediaStreamDestination();
-    recAudioCtx.createMediaStreamSource(micStream).connect(dest);
-    if (hasSystemAudio) {
-      recAudioCtx.createMediaStreamSource(new MediaStream(displayStream.getAudioTracks())).connect(dest);
-    }
-
-    const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm;codecs=opus'))
-      ? 'audio/webm;codecs=opus' : '';
-    mediaRecorder = mimeType ? new MediaRecorder(dest.stream, { mimeType }) : new MediaRecorder(dest.stream);
-    recordedChunks = [];
-    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
-    mediaRecorder.onstop = onRecordingStopped;
-    mediaRecorder.start();
-
-    recordingStartTime = Date.now();
-    recordTimer.textContent = '00:00';
-    timerInterval = setInterval(updateTimer, 500);
-
-    recordBtn.textContent = '録音停止';
-    recordBtn.disabled = false;
-    discardBtn.disabled = true;
-    transcribeBtn.disabled = true;
-    recordedAudioEl.style.display = 'none';
-
-    if (displayStream && !hasSystemAudio) {
-      setStatus(recordStatus, 'システム音声を取得できませんでした。マイクのみで録音しています。', '');
-    } else if (hasSystemAudio) {
-      setStatus(recordStatus, 'マイク＋システム音声を録音中…', 'loading');
+    if (allPoints.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-note';
+      empty.textContent = 'このシーズンの記録データはまだありません。';
+      body.appendChild(empty);
     } else {
-      setStatus(recordStatus, 'マイクのみで録音中…（画面共有はキャンセルされました）', '');
-    }
-  }
-
-  function stopRecording() {
-    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
-    mediaRecorder.stop();
-    clearInterval(timerInterval);
-    recordBtn.textContent = '録音開始';
-  }
-
-  function onRecordingStopped() {
-    const mimeType = mediaRecorder.mimeType || 'audio/webm';
-    audioBlob = recordedChunks.length ? new Blob(recordedChunks, { type: mimeType }) : null;
-
-    stopAllTracks(micStream);
-    stopAllTracks(displayStream);
-    micStream = null;
-    displayStream = null;
-    if (recAudioCtx) { recAudioCtx.close(); recAudioCtx = null; }
-
-    if (audioBlob) {
-      recordedAudioEl.src = URL.createObjectURL(audioBlob);
-      recordedAudioEl.style.display = '';
-      transcribeBtn.disabled = false;
-      discardBtn.disabled = false;
-      setStatus(recordStatus, `録音が完了しました（${formatTime(Date.now() - recordingStartTime)}）。「文字起こしを実行」を押してください。`, 'success');
-    } else {
-      setStatus(recordStatus, '録音データを取得できませんでした。', 'error');
-    }
-  }
-
-  function discardRecording() {
-    audioBlob = null;
-    recordedChunks = [];
-    recordedAudioEl.removeAttribute('src');
-    recordedAudioEl.style.display = 'none';
-    transcribeBtn.disabled = true;
-    discardBtn.disabled = true;
-    recordTimer.textContent = '00:00';
-    setStatus(recordStatus, '録音を破棄しました。', '');
-  }
-
-  recordBtn.addEventListener('click', () => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  });
-  discardBtn.addEventListener('click', discardRecording);
-
-  // ============================================================
-  // 文字起こし（transformers.js / Whisper・完全ローカル）
-  // ============================================================
-  let transformersLib = null;
-  let whisperPipeline = null;
-  let loadedWhisperModel = null;
-
-  async function loadTransformers() {
-    if (transformersLib) return transformersLib;
-    setStatus(whisperStatus, '文字起こしライブラリを読み込み中…', 'loading');
-    transformersLib = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/+esm');
-    transformersLib.env.allowLocalModels = false;
-    return transformersLib;
-  }
-
-  async function ensureWhisperLoaded() {
-    const modelId = whisperModelSelect.value;
-    if (whisperPipeline && loadedWhisperModel === modelId) return whisperPipeline;
-
-    const lib = await loadTransformers();
-    whisperModelSelect.disabled = true;
-    whisperProgressTrack.classList.add('visible');
-    whisperProgressFill.style.width = '0%';
-
-    try {
-      whisperPipeline = await lib.pipeline('automatic-speech-recognition', modelId, {
-        progress_callback: (data) => {
-          if (data && data.status === 'progress' && data.total) {
-            const pct = Math.round((data.loaded / data.total) * 100);
-            whisperProgressFill.style.width = pct + '%';
-            setStatus(whisperStatus, `モデルをダウンロード中… ${pct}%（${data.file || ''}）`, 'loading');
-          } else if (data && data.status) {
-            setStatus(whisperStatus, `準備中: ${data.status}`, 'loading');
-          }
-        }
-      });
-      loadedWhisperModel = modelId;
-      return whisperPipeline;
-    } finally {
-      whisperModelSelect.disabled = false;
-      whisperProgressTrack.classList.remove('visible');
-    }
-  }
-
-  async function decodeToMono16k(blob) {
-    const arrayBuffer = await blob.arrayBuffer();
-    const decodeCtx = new AudioContext();
-    const decoded = await decodeCtx.decodeAudioData(arrayBuffer);
-    await decodeCtx.close();
-
-    const targetRate = 16000;
-    const offlineCtx = new OfflineAudioContext(1, Math.ceil(decoded.duration * targetRate), targetRate);
-    const source = offlineCtx.createBufferSource();
-    source.buffer = decoded;
-    source.connect(offlineCtx.destination);
-    source.start();
-    const rendered = await offlineCtx.startRendering();
-    return rendered.getChannelData(0);
-  }
-
-  async function transcribeRecording() {
-    if (!audioBlob) return;
-    transcribeBtn.disabled = true;
-
-    try {
-      setStatus(whisperStatus, '録音データを変換しています…', 'loading');
-      const samples = await decodeToMono16k(audioBlob);
-
-      setStatus(whisperStatus, '文字起こしAIモデルを準備しています…', 'loading');
-      const transcriber = await ensureWhisperLoaded();
-
-      whisperStatus.innerHTML = '<span class="spinner"></span>文字起こし中…（録音時間によっては数分かかります）';
-      whisperStatus.className = 'status loading';
-
-      const result = await transcriber(samples, {
-        language: 'japanese',
-        task: 'transcribe',
-        chunk_length_s: 30,
-        stride_length_s: 5
-      });
-
-      const text = (result && result.text ? result.text : '').trim();
-      if (!text) throw new Error('文字起こし結果が空でした。録音内容をご確認ください。');
-
-      if (transcriptInput.value.trim()) {
-        const overwrite = confirm('文字起こし欄に既存の内容があります。上書きしますか？\n（キャンセルすると末尾に追記します）');
-        transcriptInput.value = overwrite ? text : (transcriptInput.value.trim() + '\n\n' + text);
-      } else {
-        transcriptInput.value = text;
+      const table = document.createElement('table');
+      table.className = 'points-table';
+      const [s, e] = seasonRange(season);
+      const span = e - s;
+      table.innerHTML = '<thead><tr><th>順位</th><th>日時</th><th>ポイント</th><th>経過率</th><th></th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      for (const p of allPoints) {
+        const tr = document.createElement('tr');
+        const r = span > 0 ? (new Date(p.t).getTime() - s) / span : 0;
+        const tdRank = document.createElement('td');
+        tdRank.textContent = p.border + '位';
+        const tdT = document.createElement('td');
+        tdT.textContent = fmtDateTime(p.t);
+        const tdPoints = document.createElement('td');
+        tdPoints.textContent = fmtNum(p.points);
+        const tdRatio = document.createElement('td');
+        tdRatio.textContent = fmtPct(r);
+        const tdDel = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-danger-ghost';
+        delBtn.textContent = '削除';
+        delBtn.addEventListener('click', () => deletePoint(season.id, p.border, p.id));
+        tdDel.appendChild(delBtn);
+        tr.append(tdRank, tdT, tdPoints, tdRatio, tdDel);
+        tbody.appendChild(tr);
       }
-
-      setStatus(whisperStatus, '文字起こしが完了し、下の入力欄に反映しました。', 'success');
-      transcriptInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } catch (e) {
-      console.error(e);
-      setStatus(whisperStatus, 'エラー: ' + e.message, 'error');
-    } finally {
-      transcribeBtn.disabled = !audioBlob;
+      table.appendChild(tbody);
+      body.appendChild(table);
     }
+
+    card.appendChild(body);
+    listEl.appendChild(card);
+  }
+}
+
+// ---------- Rendering: prediction panel ----------
+
+function renderPredictSelect() {
+  const sel = document.getElementById('predict-season-select');
+  const prevValue = sel.value;
+  sel.innerHTML = '';
+  for (const season of state.seasons) {
+    const opt = document.createElement('option');
+    opt.value = season.id;
+    opt.textContent = season.name;
+    sel.appendChild(opt);
+  }
+  if (state.seasons.some(s => s.id === prevValue)) {
+    sel.value = prevValue;
+  } else {
+    const notEnded = state.seasons.find(s => seasonStatus(s).label !== '終了');
+    sel.value = (notEnded || state.seasons[state.seasons.length - 1] || {}).id || '';
+  }
+}
+
+function renderPrediction() {
+  const sel = document.getElementById('predict-season-select');
+  const resultEl = document.getElementById('predict-result');
+  resultEl.innerHTML = '';
+
+  const season = seasonById(sel.value);
+  if (!season) {
+    resultEl.innerHTML = '<div class="empty-note">シーズンを追加すると予想が表示されます。</div>';
+    return;
   }
 
-  transcribeBtn.addEventListener('click', transcribeRecording);
+  for (const border of BORDERS) {
+    const box = document.createElement('div');
+    box.className = 'border-box';
+    const pred = predictBorder(season, border);
+
+    if (!pred) {
+      box.innerHTML = `<div class="rank">${border}位ボーダー</div><div class="empty-note" style="padding:0;">このシーズン・この順位のデータがまだありません。</div>`;
+      resultEl.appendChild(box);
+      continue;
+    }
+
+    let html = `<div class="rank">${border}位ボーダー</div>`;
+    if (pred.avg === null) {
+      html += `<div class="predicted" style="font-size:15px;color:var(--text-muted);">予想不可</div>`;
+      html += `<div class="meta">現在値: ${fmtNum(pred.latest.points)}（経過率 ${fmtPct(pred.targetRatio)} 時点）<br>参照できる過去シーズンデータ（経過率${Math.round(MIN_REFERENCE_COVERAGE*100)}%以上まで記録があるもの）がありません。</div>`;
+    } else {
+      html += `<div class="predicted">${fmtNum(pred.avg)}</div>`;
+      html += `<div class="range">予想レンジ: ${fmtNum(pred.min)} 〜 ${fmtNum(pred.max)}（中央値 ${fmtNum(pred.median)}）</div>`;
+      html += `<div class="meta">現在値: ${fmtNum(pred.latest.points)}（経過率 ${fmtPct(pred.targetRatio)} 時点） / 参照シーズン ${pred.contributions.length} 件</div>`;
+      html += `<table class="contrib-table"><thead><tr><th>参照シーズン</th><th>到達率</th><th>予想値</th></tr></thead><tbody>`;
+      for (const c of pred.contributions) {
+        html += `<tr><td>${escapeHtml(c.seasonName)}</td><td>${fmtPct(c.progress)}</td><td>${fmtNum(c.predicted)}</td></tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+    box.innerHTML = html;
+    resultEl.appendChild(box);
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------- Rendering: charts ----------
+
+function seasonColor(index) {
+  if (index < SERIES_VARS.length) {
+    return getComputedStyle(document.documentElement).getPropertyValue(SERIES_VARS[index]).trim();
+  }
+  return getComputedStyle(document.documentElement).getPropertyValue('--muted-ink').trim();
+}
+
+function renderLegend() {
+  const legendEl = document.getElementById('chart-legend');
+  legendEl.innerHTML = '';
+  state.seasons.forEach((season, i) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    const swatch = document.createElement('span');
+    swatch.className = 'legend-swatch';
+    swatch.style.background = seasonColor(i);
+    const label = document.createElement('span');
+    label.textContent = season.name;
+    item.append(swatch, label);
+    legendEl.appendChild(item);
+  });
+}
+
+const chartState = {}; // border -> { canvas, tooltip, geometry }
+
+function niceMax(v) {
+  if (v <= 0) return 10;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(v)));
+  const norm = v / magnitude;
+  let step;
+  if (norm <= 1) step = 1;
+  else if (norm <= 2) step = 2;
+  else if (norm <= 5) step = 5;
+  else step = 10;
+  return step * magnitude;
+}
+
+function drawChart(border) {
+  const canvas = document.getElementById('chart-' + border);
+  const tooltip = document.getElementById('tooltip-' + border);
+  const dpr = window.devicePixelRatio || 1;
+  const cssWidth = canvas.clientWidth || canvas.parentElement.clientWidth;
+  const cssHeight = 220;
+  canvas.width = cssWidth * dpr;
+  canvas.height = cssHeight * dpr;
+  canvas.style.height = cssHeight + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+  const cs = getComputedStyle(document.documentElement);
+  const gridColor = cs.getPropertyValue('--grid').trim();
+  const axisColor = cs.getPropertyValue('--axis').trim();
+  const mutedInk = cs.getPropertyValue('--muted-ink').trim();
+  const cardColor = cs.getPropertyValue('--card').trim();
+
+  const padL = 60, padR = 16, padT = 12, padB = 24;
+  const plotW = cssWidth - padL - padR;
+  const plotH = cssHeight - padT - padB;
+
+  const seriesList = [];
+  state.seasons.forEach((season, i) => {
+    const series = ratioSeries(season, border);
+    if (series.length > 0) seriesList.push({ season, series, color: seasonColor(i) });
+  });
+
+  chartState[border] = { canvas, tooltip, padL, padR, padT, padB, plotW, plotH, cssWidth, cssHeight, seriesList, maxY: 0 };
+
+  if (seriesList.length === 0) {
+    ctx.fillStyle = mutedInk;
+    ctx.font = '12px sans-serif';
+    ctx.fillText('データがありません', padL, padT + plotH / 2);
+    return;
+  }
+
+  let maxPoints = 0;
+  for (const s of seriesList) {
+    for (const p of s.series) maxPoints = Math.max(maxPoints, p.points);
+  }
+  const maxY = niceMax(maxPoints * 1.08);
+  chartState[border].maxY = maxY;
+
+  const xOf = r => padL + r * plotW;
+  const yOf = v => padT + plotH - (v / maxY) * plotH;
+  chartState[border].xOf = xOf;
+  chartState[border].yOf = yOf;
+
+  // gridlines (y ticks)
+  const yTicks = 4;
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 1;
+  ctx.fillStyle = mutedInk;
+  ctx.font = '10.5px sans-serif';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= yTicks; i++) {
+    const v = (maxY / yTicks) * i;
+    const y = yOf(v);
+    ctx.beginPath();
+    ctx.moveTo(padL, y + 0.5);
+    ctx.lineTo(padL + plotW, y + 0.5);
+    ctx.stroke();
+    ctx.textAlign = 'right';
+    ctx.fillText(fmtNum(v), padL - 8, y);
+  }
+
+  // x axis
+  ctx.strokeStyle = axisColor;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT + plotH + 0.5);
+  ctx.lineTo(padL + plotW, padT + plotH + 0.5);
+  ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  [0, 0.25, 0.5, 0.75, 1].forEach(r => {
+    ctx.fillText(Math.round(r * 100) + '%', xOf(r), padT + plotH + 6);
+  });
+
+  // lines
+  seriesList.forEach(({ series, color }, idx) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    series.forEach((p, i) => {
+      const x = xOf(p.r), y = yOf(p.points);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // end marker with surface ring
+    const last = series[series.length - 1];
+    const ex = xOf(last.r), ey = yOf(last.points);
+    ctx.beginPath();
+    ctx.arc(ex, ey, 6, 0, Math.PI * 2);
+    ctx.strokeStyle = cardColor;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function setupChartInteraction(border) {
+  const canvas = document.getElementById('chart-' + border);
+  const tooltip = document.getElementById('tooltip-' + border);
+
+  canvas.addEventListener('mousemove', (e) => {
+    const cs = chartState[border];
+    if (!cs || !cs.xOf) { tooltip.style.display = 'none'; return; }
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    if (mx < cs.padL || mx > cs.padL + cs.plotW) { tooltip.style.display = 'none'; return; }
+    const r = (mx - cs.padL) / cs.plotW;
+
+    const rows = [];
+    for (const { season, series, color } of cs.seriesList) {
+      const v = interpolateAt(series, r);
+      if (v !== null) rows.push({ name: season.name, value: v, color });
+    }
+    if (rows.length === 0) { tooltip.style.display = 'none'; return; }
+
+    let html = `<div class="t-head">経過率 ${(r * 100).toFixed(1)}%</div>`;
+    for (const row of rows) {
+      html += `<div class="t-row"><span class="t-key" style="background:${row.color}"></span><span class="t-name"></span><span class="t-val">${fmtNum(row.value)}</span></div>`;
+    }
+    tooltip.innerHTML = html;
+    const nameEls = tooltip.querySelectorAll('.t-name');
+    rows.forEach((row, i) => { nameEls[i].textContent = row.name; });
+
+    tooltip.style.display = 'block';
+    let left = mx + 14;
+    if (left + tooltip.offsetWidth > cs.cssWidth) left = mx - tooltip.offsetWidth - 14;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = '8px';
+  });
+  canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+}
+
+function renderCharts() {
+  renderLegend();
+  for (const border of BORDERS) drawChart(border);
+}
+
+// ---------- Top-level render / wiring ----------
+
+function renderAll() {
+  renderSeasonList();
+  renderPredictSelect();
+  renderPrediction();
+  renderCharts();
+}
+
+document.getElementById('add-season-btn').addEventListener('click', addSeason);
+document.getElementById('predict-season-select').addEventListener('change', renderPrediction);
+window.addEventListener('resize', renderCharts);
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderCharts);
+for (const border of BORDERS) setupChartInteraction(border);
+
+renderAll();
 </script>
 </body>
 </html>
